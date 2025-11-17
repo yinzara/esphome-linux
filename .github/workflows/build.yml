@@ -1,0 +1,126 @@
+name: Build Multi-Architecture
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'feat/**'
+      - 'fix/**'
+      - 'dev/**'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-native:
+    name: Build Native (x86_64 & ARM64)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build x86_64
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          outputs: type=local,dest=./output-amd64
+          cache-from: type=gha,scope=amd64
+          cache-to: type=gha,mode=max,scope=amd64
+
+      - name: Build ARM64
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/arm64
+          outputs: type=local,dest=./output-arm64
+          cache-from: type=gha,scope=arm64
+          cache-to: type=gha,mode=max,scope=arm64
+
+      - name: Verify binaries
+        run: |
+          ls -lh ./output-amd64/usr/local/bin
+          ls -lh ./output-arm64/usr/local/bin
+          file ./output-amd64/usr/local/bin/esphome-linux || true
+          file ./output-arm64/usr/local/bin/esphome-linux || true
+
+      - name: Upload x86_64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: esphome-linux-x86_64
+          path: ./output-amd64/usr/local/bin/esphome-linux
+          if-no-files-found: error
+
+      - name: Upload ARM64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: esphome-linux-arm64
+          path: ./output-arm64/usr/local/bin/esphome-linux
+          if-no-files-found: error
+
+  build-mips:
+    name: Build MIPS (Ingenic T31)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unrar curl
+
+      - name: Cache Ingenic SDK
+        id: cache-sdk
+        uses: actions/cache@v4
+        with:
+          path: ../Ingenic-SDK-T31-1.1.1-20200508
+          key: ingenic-sdk-t31-${{ hashFiles('scripts/setup-ingenic-sdk.sh') }}
+          restore-keys: |
+            ingenic-sdk-t31-
+
+      - name: Download and setup Ingenic SDK
+        if: steps.cache-sdk.outputs.cache-hit != 'true'
+        run: |
+          ./scripts/setup-ingenic-sdk.sh
+        env:
+          CLEANUP_RAR: "yes"
+
+      - name: Verify SDK
+        run: |
+          ls -la ../Ingenic-SDK-T31-1.1.1-20200508/toolchain/
+          ../Ingenic-SDK-T31-1.1.1-20200508/toolchain/mips-gcc540-glibc222-64bit-r3.3.0/bin/mips-linux-gnu-gcc --version
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build MIPS binary
+        run: |
+          ./scripts/build.sh --mips
+        env:
+          SDK_DIR: ../Ingenic-SDK-T31-1.1.1-20200508
+          DOCKER_BUILDKIT: 1
+
+      - name: Verify MIPS binary
+        run: |
+          ls -lh ./esphome-linux-mips
+          file ./esphome-linux-mips
+          # Should show: ELF 32-bit LSB executable, MIPS
+
+      - name: Upload MIPS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: esphome-linux-mips
+          path: ./esphome-linux-mips
+          if-no-files-found: error

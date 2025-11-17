@@ -3,7 +3,7 @@
  * @brief BLE Scanner Implementation using BlueZ D-Bus
  */
 
-#include "include/ble_scanner.h"
+#include "ble_scanner.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

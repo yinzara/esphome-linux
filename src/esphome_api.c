@@ -5,6 +5,7 @@
 
 #include "include/esphome_api.h"
 #include "include/esphome_proto.h"
+#include "include/esphome_plugin_internal.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,7 +19,6 @@
 
 #define RECV_BUFFER_SIZE 4096
 #define SEND_BUFFER_SIZE 8192
-#define BATCH_FLUSH_INTERVAL_MS 100
 #define LOG_PREFIX "[esphome-api] "
 
 /**
@@ -27,7 +27,6 @@
 typedef struct {
     int fd;
     bool authenticated;
-    bool subscribed_ble;
     uint8_t recv_buffer[RECV_BUFFER_SIZE];
     size_t recv_pos;
     pthread_mutex_t send_mutex;
@@ -44,39 +43,15 @@ struct esphome_api_server {
     int listen_fd;
     bool running;
     pthread_t listen_thread;
-    pthread_t flush_thread;
 
     /* Client connections */
     client_connection_t clients[ESPHOME_MAX_CLIENTS];
     pthread_mutex_t clients_mutex;
-
-    /* BLE advertisement batch */
-    esphome_ble_advertisements_response_t ble_batch;
-    pthread_mutex_t batch_mutex;
-    struct timespec last_flush;
 };
 
 /* -----------------------------------------------------------------
  * Utility functions
  * ----------------------------------------------------------------- */
-
-static uint64_t get_time_ms(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (uint64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
-}
-
-static uint64_t mac_to_uint64(const uint8_t *mac) {
-    uint64_t result = 0;
-    printf(LOG_PREFIX "mac_to_uint64: input MAC=%02X:%02X:%02X:%02X:%02X:%02X\n",
-           mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    /* Pack bytes in big-endian order (mac[0] is MSB) */
-    for (int i = 0; i < 6; i++) {
-        result |= ((uint64_t)mac[i]) << ((5 - i) * 8);
-    }
-    printf(LOG_PREFIX "mac_to_uint64: result=0x%016llX\n", (unsigned long long)result);
-    return result;
-}
 
 /* -----------------------------------------------------------------
  * Client management
@@ -94,7 +69,6 @@ static void client_close(client_connection_t *client) {
         client->fd = -1;
     }
     client->authenticated = false;
-    client->subscribed_ble = false;
     client->recv_pos = 0;
 }
 
@@ -230,26 +204,38 @@ static void handle_device_info_request(esphome_api_server_t *server,
     esphome_device_info_response_t response;
     memset(&response, 0, sizeof(response));
 
+    /* Core device information */
     response.uses_password = false;
     strncpy(response.name, server->config.device_name, sizeof(response.name) - 1);
     strncpy(response.mac_address, server->config.mac_address, sizeof(response.mac_address) - 1);
     strncpy(response.esphome_version, server->config.esphome_version, sizeof(response.esphome_version) - 1);
     strncpy(response.compilation_time, __DATE__ " " __TIME__, sizeof(response.compilation_time) - 1);
     strncpy(response.model, server->config.model, sizeof(response.model) - 1);
+    response.has_deep_sleep = false;
+
+    /* Project info (optional - leave empty if not set) */
+    response.project_name[0] = '\0';
+    response.project_version[0] = '\0';
+    response.webserver_port = 0;  /* No webserver by default */
+
+    /* Device metadata */
     strncpy(response.manufacturer, server->config.manufacturer, sizeof(response.manufacturer) - 1);
     strncpy(response.friendly_name, server->config.friendly_name, sizeof(response.friendly_name) - 1);
     strncpy(response.suggested_area, server->config.suggested_area, sizeof(response.suggested_area) - 1);
-    response.has_deep_sleep = false;
 
-    /* Advertise Bluetooth proxy support - passive scanning + raw advertisements only */
-    response.bluetooth_proxy_feature_flags = BLE_FEATURE_PASSIVE_SCAN | BLE_FEATURE_RAW_ADVERTISEMENTS;
-    /* Use the same MAC address for Bluetooth (WiFi-based BLE proxy) */
-    strncpy(response.bluetooth_mac_address, server->config.mac_address, sizeof(response.bluetooth_mac_address) - 1);
+    /* Feature flags - initialized to 0, plugins will set them */
+    response.bluetooth_proxy_feature_flags = 0;
+    response.voice_assistant_feature_flags = 0;
+    response.zwave_proxy_feature_flags = 0;
 
-    printf(LOG_PREFIX "DeviceInfo: BLE proxy flags = 0x%08x (PASSIVE_SCAN=0x%x, RAW_ADV=0x%x)\n",
-           response.bluetooth_proxy_feature_flags,
-           BLE_FEATURE_PASSIVE_SCAN,
-           BLE_FEATURE_RAW_ADVERTISEMENTS);
+    /* API encryption - not supported yet */
+    response.api_encryption_supported = false;
+
+    /* Z-Wave - not configured by default */
+    response.zwave_home_id = 0;
+
+    /* Let plugins configure device capabilities (e.g., Bluetooth proxy features, Voice Assistant, Z-Wave) */
+    esphome_plugin_configure_device_info_all(server, &server->config, &response);
 
     uint8_t encode_buf[1024];
     size_t len = esphome_encode_device_info_response(encode_buf, sizeof(encode_buf), &response);
@@ -285,11 +271,26 @@ static void handle_device_info_request(esphome_api_server_t *server,
 static void handle_list_entities_request(esphome_api_server_t *server,
                                           client_connection_t *client,
                                           const uint8_t *payload, size_t payload_len) {
-    (void)server;
     (void)payload;
     (void)payload_len;
 
-    /* No entities for BLE-only proxy, just send done */
+    /* Find client ID */
+    int client_id = -1;
+    pthread_mutex_lock(&server->clients_mutex);
+    for (int i = 0; i < ESPHOME_MAX_CLIENTS; i++) {
+        if (&server->clients[i] == client) {
+            client_id = i;
+            break;
+        }
+    }
+    pthread_mutex_unlock(&server->clients_mutex);
+
+    /* Allow plugins to list their entities */
+    if (client_id >= 0) {
+        esphome_plugin_list_entities_all(server, &server->config, client_id);
+    }
+
+    /* Send done message */
     send_message(client, ESPHOME_MSG_LIST_ENTITIES_DONE_RESPONSE, NULL, 0);
 }
 
@@ -302,18 +303,6 @@ static void handle_subscribe_states_request(esphome_api_server_t *server,
     (void)payload_len;
 
     /* No states to subscribe to - client will receive no state updates */
-}
-
-static void handle_subscribe_ble_advertisements(esphome_api_server_t *server,
-                                                 client_connection_t *client,
-                                                 const uint8_t *payload, size_t payload_len) {
-    (void)server;
-
-    esphome_subscribe_ble_advertisements_t request;
-    if (esphome_decode_subscribe_ble_advertisements(payload, payload_len, &request)) {
-        client->subscribed_ble = true;
-        printf(LOG_PREFIX "Client subscribed to BLE advertisements (flags: 0x%x)\n", request.flags);
-    }
 }
 
 static void handle_ping_request(esphome_api_server_t *server,
@@ -372,9 +361,6 @@ static void dispatch_message(esphome_api_server_t *server,
         case ESPHOME_MSG_SUBSCRIBE_STATES_REQUEST:
             handle_subscribe_states_request(server, client, payload, payload_len);
             break;
-        case ESPHOME_MSG_SUBSCRIBE_BLUETOOTH_LE_ADVERTISEMENTS_REQUEST:
-            handle_subscribe_ble_advertisements(server, client, payload, payload_len);
-            break;
         case ESPHOME_MSG_SUBSCRIBE_HOMEASSISTANT_SERVICES_REQUEST:
             handle_subscribe_homeassistant_services(server, client, payload, payload_len);
             break;
@@ -388,8 +374,11 @@ static void dispatch_message(esphome_api_server_t *server,
             printf(LOG_PREFIX "Client requested disconnect\n");
             break;
         default:
-            printf(LOG_PREFIX "!!! Unhandled message type: %u (%s)\n",
-                   msg_type, message_type_name(msg_type));
+            /* Try delegating to plugins */
+            if (esphome_plugin_handle_message(server, &server->config, msg_type, payload, payload_len) < 0) {
+                printf(LOG_PREFIX "!!! Unhandled message type: %u (%s)\n",
+                       msg_type, message_type_name(msg_type));
+            }
             break;
     }
 }
@@ -462,70 +451,6 @@ static void *client_thread(void *arg) {
 
     /* Find this client in the array (passed via arg is actually server) */
     /* We'll handle this differently - see below */
-
-    return NULL;
-}
-
-/* -----------------------------------------------------------------
- * BLE advertisement batching
- * ----------------------------------------------------------------- */
-
-static void flush_ble_batch(esphome_api_server_t *server) {
-    pthread_mutex_lock(&server->batch_mutex);
-
-    if (server->ble_batch.count == 0) {
-        pthread_mutex_unlock(&server->batch_mutex);
-        return;
-    }
-
-    /* Encode batch */
-    uint8_t encode_buf[ESPHOME_MAX_MESSAGE_SIZE];
-    size_t len = esphome_encode_ble_advertisements(encode_buf, sizeof(encode_buf),
-                                                     &server->ble_batch);
-
-    if (len == 0) {
-        fprintf(stderr, LOG_PREFIX "Failed to encode BLE batch\n");
-        server->ble_batch.count = 0;
-        pthread_mutex_unlock(&server->batch_mutex);
-        return;
-    }
-
-    /* Send to all subscribed clients */
-    pthread_mutex_lock(&server->clients_mutex);
-    for (int i = 0; i < ESPHOME_MAX_CLIENTS; i++) {
-        if (server->clients[i].fd >= 0 && server->clients[i].subscribed_ble) {
-            send_message(&server->clients[i],
-                        ESPHOME_MSG_BLUETOOTH_LE_RAW_ADVERTISEMENTS_RESPONSE,
-                        encode_buf, len);
-        }
-    }
-    pthread_mutex_unlock(&server->clients_mutex);
-
-    printf(LOG_PREFIX "Sent BLE batch: %zu advertisements\n", server->ble_batch.count);
-
-    /* Clear batch */
-    server->ble_batch.count = 0;
-    clock_gettime(CLOCK_MONOTONIC, &server->last_flush);
-
-    pthread_mutex_unlock(&server->batch_mutex);
-}
-
-static void *flush_thread_func(void *arg) {
-    esphome_api_server_t *server = (esphome_api_server_t *)arg;
-
-    while (server->running) {
-        usleep(BATCH_FLUSH_INTERVAL_MS * 1000);
-
-        struct timespec now;
-        clock_gettime(CLOCK_MONOTONIC, &now);
-
-        uint64_t elapsed_ms = (now.tv_sec - server->last_flush.tv_sec) * 1000 +
-                             (now.tv_nsec - server->last_flush.tv_nsec) / 1000000;
-
-        if (elapsed_ms >= BATCH_FLUSH_INTERVAL_MS) {
-            flush_ble_batch(server);
-        }
-    }
 
     return NULL;
 }
@@ -647,13 +572,10 @@ esphome_api_server_t *esphome_api_init(const esphome_device_config_t *config) {
     server->running = false;
 
     pthread_mutex_init(&server->clients_mutex, NULL);
-    pthread_mutex_init(&server->batch_mutex, NULL);
 
     for (int i = 0; i < ESPHOME_MAX_CLIENTS; i++) {
         client_init(&server->clients[i]);
     }
-
-    clock_gettime(CLOCK_MONOTONIC, &server->last_flush);
 
     return server;
 }
@@ -694,10 +616,9 @@ int esphome_api_start(esphome_api_server_t *server) {
 
     printf(LOG_PREFIX "Listening on port %d\n", ESPHOME_API_PORT);
 
-    /* Start threads */
+    /* Start listen thread */
     server->running = true;
     pthread_create(&server->listen_thread, NULL, listen_thread_func, server);
-    pthread_create(&server->flush_thread, NULL, flush_thread_func, server);
 
     return 0;
 }
@@ -716,9 +637,8 @@ void esphome_api_stop(esphome_api_server_t *server) {
         server->listen_fd = -1;
     }
 
-    /* Wait for threads */
+    /* Wait for listen thread */
     pthread_join(server->listen_thread, NULL);
-    pthread_join(server->flush_thread, NULL);
 
     /* Wait for all client threads to finish */
     for (int i = 0; i < ESPHOME_MAX_CLIENTS; i++) {
@@ -745,46 +665,62 @@ void esphome_api_free(esphome_api_server_t *server) {
     }
 
     pthread_mutex_destroy(&server->clients_mutex);
-    pthread_mutex_destroy(&server->batch_mutex);
 
     free(server);
 }
 
-void esphome_api_queue_ble_advert(esphome_api_server_t *server,
-                                  const esphome_ble_advert_t *advert) {
-    if (!server || !advert) {
-        return;
+/**
+ * Send a message to a specific client (for plugin use)
+ */
+int esphome_api_send_to_client(esphome_api_server_t *server,
+                                int client_id,
+                                uint16_t msg_type,
+                                const uint8_t *payload,
+                                size_t payload_len) {
+    if (!server || client_id < 0 || client_id >= ESPHOME_MAX_CLIENTS) {
+        return -1;
     }
 
-    pthread_mutex_lock(&server->batch_mutex);
+    pthread_mutex_lock(&server->clients_mutex);
 
-    if (server->ble_batch.count >= ESPHOME_MAX_ADV_BATCH) {
-        pthread_mutex_unlock(&server->batch_mutex);
-        flush_ble_batch(server);
-        pthread_mutex_lock(&server->batch_mutex);
+    client_connection_t *client = &server->clients[client_id];
+    if (client->fd < 0) {
+        pthread_mutex_unlock(&server->clients_mutex);
+        return -1;
     }
 
-    /* Convert to protobuf format */
-    esphome_ble_advertisement_t *pb_adv = &server->ble_batch.advertisements[server->ble_batch.count];
+    int result = send_message(client, msg_type, payload, payload_len);
 
-    pb_adv->address = mac_to_uint64(advert->address);
-    pb_adv->rssi = advert->rssi;
-    pb_adv->address_type = advert->address_type;
+    pthread_mutex_unlock(&server->clients_mutex);
 
-    size_t copy_len = advert->data_len;
-    if (copy_len > sizeof(pb_adv->data)) {
-        copy_len = sizeof(pb_adv->data);
+    return result;
+}
+
+/**
+ * Broadcast a message to all connected clients (for plugin use)
+ */
+int esphome_api_broadcast(esphome_api_server_t *server,
+                          uint16_t msg_type,
+                          const uint8_t *payload,
+                          size_t payload_len) {
+    if (!server) {
+        return 0;
     }
 
-    memcpy(pb_adv->data, advert->data, copy_len);
-    pb_adv->data_len = copy_len;
+    int sent_count = 0;
 
-    server->ble_batch.count++;
+    pthread_mutex_lock(&server->clients_mutex);
 
-    pthread_mutex_unlock(&server->batch_mutex);
-
-    /* Flush immediately if batch is full */
-    if (server->ble_batch.count >= ESPHOME_MAX_ADV_BATCH) {
-        flush_ble_batch(server);
+    for (int i = 0; i < ESPHOME_MAX_CLIENTS; i++) {
+        client_connection_t *client = &server->clients[i];
+        if (client->fd >= 0) {
+            if (send_message(client, msg_type, payload, payload_len) == 0) {
+                sent_count++;
+            }
+        }
     }
+
+    pthread_mutex_unlock(&server->clients_mutex);
+
+    return sent_count;
 }

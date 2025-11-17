@@ -2,8 +2,8 @@
  * @file esphome_api.h
  * @brief ESPHome Native API Server
  *
- * Implements the ESPHome Native API protocol over TCP for
- * Bluetooth Proxy functionality.
+ * Implements the ESPHome Native API protocol over TCP.
+ * Provides a plugin-based architecture for extending functionality.
  */
 
 #ifndef ESPHOME_API_H
@@ -20,7 +20,7 @@
 /**
  * Device configuration
  */
-typedef struct {
+typedef struct esphome_device_config {
     char device_name[128];
     char mac_address[24];         /* "AA:BB:CC:DD:EE:FF" */
     char esphome_version[32];
@@ -29,17 +29,6 @@ typedef struct {
     char friendly_name[128];
     char suggested_area[64];
 } esphome_device_config_t;
-
-/**
- * BLE advertisement (matches ble_scanner.h structure)
- */
-typedef struct {
-    uint8_t address[6];          /* BLE MAC address */
-    uint8_t address_type;        /* 0=public, 1=random */
-    int8_t rssi;                 /* Signal strength */
-    uint8_t data[62];            /* Combined adv + scan response */
-    size_t data_len;
-} esphome_ble_advert_t;
 
 /**
  * API server instance
@@ -79,14 +68,33 @@ void esphome_api_stop(esphome_api_server_t *server);
 void esphome_api_free(esphome_api_server_t *server);
 
 /**
- * Queue a BLE advertisement for sending
+ * Send a message to a specific client (for plugin use)
  *
- * Advertisements are batched and sent periodically to connected clients.
- *
- * @param server Server instance
- * @param advert Advertisement data
+ * @param server API server instance
+ * @param client_id Client index (0-based)
+ * @param msg_type ESPHome Native API message type
+ * @param payload Message payload
+ * @param payload_len Length of payload
+ * @return 0 on success, -1 on error
  */
-void esphome_api_queue_ble_advert(esphome_api_server_t *server,
-                                  const esphome_ble_advert_t *advert);
+int esphome_api_send_to_client(esphome_api_server_t *server,
+                                int client_id,
+                                uint16_t msg_type,
+                                const uint8_t *payload,
+                                size_t payload_len);
+
+/**
+ * Broadcast a message to all connected clients (for plugin use)
+ *
+ * @param server API server instance
+ * @param msg_type ESPHome Native API message type
+ * @param payload Message payload
+ * @param payload_len Length of payload
+ * @return Number of clients message was sent to
+ */
+int esphome_api_broadcast(esphome_api_server_t *server,
+                          uint16_t msg_type,
+                          const uint8_t *payload,
+                          size_t payload_len);
 
 #endif /* ESPHOME_API_H */

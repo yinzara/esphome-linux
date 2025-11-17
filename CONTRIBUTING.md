@@ -17,8 +17,8 @@ Thank you for considering contributing! This project aims to be a lightweight, p
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/esphome-bluez-ble-proxy.git
-cd esphome-bluez-ble-proxy
+git clone https://github.com/yourusername/esphome-linux.git
+cd esphome-linux
 
 # Install dependencies (Debian/Ubuntu)
 sudo apt-get install meson ninja-build pkg-config \
@@ -28,7 +28,7 @@ sudo apt-get install meson ninja-build pkg-config \
 make
 
 # Run
-./build/esphome-ble-proxy
+./esphome-linux
 ```
 
 ## Code Style
@@ -39,20 +39,6 @@ make
 - **UPPER_CASE** for macros and constants
 - **Clear comments** for complex logic
 - **Doxygen-style** documentation for public APIs
-
-### Example
-
-```c
-/**
- * Parse BLE advertisement data
- * @param data Raw advertisement data
- * @param len Data length
- * @return Parsed advertisement structure
- */
-static ble_advertisement_t *parse_advertisement(const uint8_t *data, size_t len) {
-    /* Implementation */
-}
-```
 
 ## Testing
 
@@ -84,7 +70,7 @@ Currently, testing is manual. Automated tests are welcome contributions!
 ### Module Responsibilities
 
 - **main.c** - Entry point, signal handling, initialization
-- **ble_scanner.c** - BlueZ D-Bus, BLE scanning, device caching
+- **plugins** - Plugins for all functionality supported by the service
 - **esphome_api.c** - ESPHome protocol server, client management
 - **esphome_proto.c** - Protobuf encoding/decoding (lightweight)
 
@@ -112,18 +98,6 @@ Currently, testing is manual. Automated tests are welcome contributions!
 3. Update documentation (README, comments)
 4. Verify cross-compilation still works
 5. Submit pull request
-
-### Example: Adding Configuration File Support
-
-```c
-/* Add to main.c */
-static int load_config(const char *path, config_t *cfg) {
-    /* Parse config file */
-}
-
-/* Update README with config format */
-/* Add config example to repository */
-```
 
 ## Pull Request Process
 
@@ -173,8 +147,8 @@ This project uses [Semantic Versioning](https://semver.org/):
 
 1. Update version in `meson.build`
 2. Update CHANGELOG
-3. Tag release: `git tag -a v1.0.0 -m "Release 1.0.0"`
-4. Push tag: `git push origin v1.0.0`
+3. Tag release: `git tag -a v0.x.x -m "Release 0.x.x"`
+4. Push tag: `git push origin v0.x.x`
 5. GitHub Actions builds artifacts (if configured)
 
 ## Questions?

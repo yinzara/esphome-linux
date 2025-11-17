@@ -1,5 +1,6 @@
 # Build directories
 build/
+build-*/
 builddir/
 *.o
 *.a
@@ -12,7 +13,9 @@ meson-private/
 compile_commands.json
 
 # Executables
-esphome-ble-proxy
+esphome-linux
+/esphome-linux
+/esphome-linux-*
 *.elf
 
 # Editor files
@@ -31,7 +34,9 @@ vgcore.*
 
 # Cross-compilation artifacts
 sysroot/
+sysroot-*/
 toolchain/
+build-deps/
 
 # Local configuration
 local.txt

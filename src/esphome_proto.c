@@ -286,7 +286,7 @@ size_t esphome_encode_device_info_response(uint8_t *buf, size_t size,
     pb_buffer_t pb;
     pb_buffer_init_write(&pb, buf, size);
 
-    /* Encode fields in order */
+    /* Encode fields in order (matching api.proto DeviceInfoResponse) */
     pb_encode_bool(&pb, 1, msg->uses_password);           /* Field 1 */
     pb_encode_string(&pb, 2, msg->name);                  /* Field 2 */
     pb_encode_string(&pb, 3, msg->mac_address);           /* Field 3 */
@@ -294,18 +294,56 @@ size_t esphome_encode_device_info_response(uint8_t *buf, size_t size,
     pb_encode_string(&pb, 5, msg->compilation_time);      /* Field 5 */
     pb_encode_string(&pb, 6, msg->model);                 /* Field 6 */
     pb_encode_bool(&pb, 7, msg->has_deep_sleep);          /* Field 7 */
+
+    /* Field 8: project_name (optional) */
+    if (msg->project_name[0] != '\0') {
+        pb_encode_string(&pb, 8, msg->project_name);
+    }
+
+    /* Field 9: project_version (optional) */
+    if (msg->project_version[0] != '\0') {
+        pb_encode_string(&pb, 9, msg->project_version);
+    }
+
+    /* Field 10: webserver_port (optional, only if non-zero) */
+    if (msg->webserver_port != 0) {
+        pb_encode_uint32(&pb, 10, msg->webserver_port);
+    }
+
     pb_encode_string(&pb, 12, msg->manufacturer);         /* Field 12 */
     pb_encode_string(&pb, 13, msg->friendly_name);        /* Field 13 */
 
-    /* Field 15: Bluetooth proxy feature flags */
+    /* Field 15: Bluetooth proxy feature flags (optional) */
     if (msg->bluetooth_proxy_feature_flags != 0) {
         pb_encode_uint32(&pb, 15, msg->bluetooth_proxy_feature_flags);
     }
 
     pb_encode_string(&pb, 16, msg->suggested_area);       /* Field 16 */
 
+    /* Field 17: Voice assistant feature flags (optional) */
+    if (msg->voice_assistant_feature_flags != 0) {
+        pb_encode_uint32(&pb, 17, msg->voice_assistant_feature_flags);
+    }
+
     /* Field 18: Bluetooth MAC address */
     pb_encode_string(&pb, 18, msg->bluetooth_mac_address);
+
+    /* Field 19: API encryption supported (optional) */
+    if (msg->api_encryption_supported) {
+        pb_encode_bool(&pb, 19, msg->api_encryption_supported);
+    }
+
+    /* Fields 20-22: repeated/nested messages - not yet implemented */
+
+    /* Field 23: Z-Wave proxy feature flags (optional) */
+    if (msg->zwave_proxy_feature_flags != 0) {
+        pb_encode_uint32(&pb, 23, msg->zwave_proxy_feature_flags);
+    }
+
+    /* Field 24: Z-Wave home ID (optional) */
+    if (msg->zwave_home_id != 0) {
+        pb_encode_uint32(&pb, 24, msg->zwave_home_id);
+    }
 
     return pb.error ? 0 : pb.pos;
 }

@@ -13,7 +13,7 @@ ifdef CROSS_COMPILE
 	export CC AR STRIP
 endif
 
-.PHONY: all configure build clean install uninstall help
+.PHONY: all configure build clean install uninstall help cross
 
 all: build
 
@@ -50,6 +50,10 @@ reconfigure:
 	@echo "Reconfiguring..."
 	meson setup $(BUILDDIR) --reconfigure
 
+cross:
+	@echo "Cross-compiling for Ingenic T31 (MIPS)..."
+	./scripts/build.sh --mips
+
 help:
 	@echo "ESPHome BlueZ BLE Proxy - Build System"
 	@echo ""
@@ -61,6 +65,7 @@ help:
 	@echo "  install     - Install to system"
 	@echo "  uninstall   - Remove from system"
 	@echo "  reconfigure - Reconfigure existing build"
+	@echo "  cross       - Cross-compile for Ingenic T31 (auto-builds deps)"
 	@echo "  help        - Show this help"
 	@echo ""
 	@echo "Variables:"
@@ -71,7 +76,8 @@ help:
 	@echo ""
 	@echo "Examples:"
 	@echo "  make                                    # Native build"
-	@echo "  make CROSS_COMPILE=mipsel-linux-       # Cross-compile"
+	@echo "  make cross                              # Cross-compile for Ingenic T31"
+	@echo "  make CROSS_COMPILE=mipsel-linux-       # Cross-compile (generic)"
 	@echo "  make CROSSFILE=cross/mips-linux.txt    # Cross-compile with file"
 	@echo "  make install                            # Install to system"
 	@echo "  make clean                              # Clean build"

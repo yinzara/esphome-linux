@@ -29,8 +29,92 @@
 #define ESPHOME_MSG_SUBSCRIBE_STATES_REQUEST                    20
 #define ESPHOME_MSG_SUBSCRIBE_HOMEASSISTANT_SERVICES_REQUEST    34
 #define ESPHOME_MSG_SUBSCRIBE_HOMEASSISTANT_STATES_REQUEST      38
-#define ESPHOME_MSG_SUBSCRIBE_BLUETOOTH_LE_ADVERTISEMENTS_REQUEST  66
-#define ESPHOME_MSG_BLUETOOTH_LE_RAW_ADVERTISEMENTS_RESPONSE     93
+
+/* Entity State Messages (20-39) */
+#define ESPHOME_MSG_BINARY_SENSOR_STATE_RESPONSE                 21
+#define ESPHOME_MSG_COVER_STATE_RESPONSE                         22
+#define ESPHOME_MSG_FAN_STATE_RESPONSE                           23
+#define ESPHOME_MSG_LIGHT_STATE_RESPONSE                         24
+#define ESPHOME_MSG_SENSOR_STATE_RESPONSE                        25
+#define ESPHOME_MSG_SWITCH_STATE_RESPONSE                        26
+#define ESPHOME_MSG_TEXT_SENSOR_STATE_RESPONSE                   27
+#define ESPHOME_MSG_SUBSCRIBE_HOMEASSISTANT_SERVICES_REQUEST     34
+#define ESPHOME_MSG_HOMEASSISTANT_SERVICE_RESPONSE               35
+
+/* Entity Command Messages (30-33, 36-37, 40-65) */
+#define ESPHOME_MSG_COVER_COMMAND_REQUEST                        30
+#define ESPHOME_MSG_FAN_COMMAND_REQUEST                          31
+#define ESPHOME_MSG_LIGHT_COMMAND_REQUEST                        32
+#define ESPHOME_MSG_SWITCH_COMMAND_REQUEST                       33
+#define ESPHOME_MSG_HOMEASSISTANT_SERVICE_CALL                   36
+#define ESPHOME_MSG_HOMEASSISTANT_STATE_RESPONSE                 37
+#define ESPHOME_MSG_CLIMATE_STATE_RESPONSE                       40
+#define ESPHOME_MSG_CLIMATE_COMMAND_REQUEST                      41
+#define ESPHOME_MSG_NUMBER_STATE_RESPONSE                        42
+#define ESPHOME_MSG_NUMBER_COMMAND_REQUEST                       43
+#define ESPHOME_MSG_SELECT_STATE_RESPONSE                        44
+#define ESPHOME_MSG_SELECT_COMMAND_REQUEST                       45
+#define ESPHOME_MSG_BUTTON_COMMAND_REQUEST                       46
+#define ESPHOME_MSG_LOCK_STATE_RESPONSE                          47
+#define ESPHOME_MSG_LOCK_COMMAND_REQUEST                         48
+#define ESPHOME_MSG_VALVE_STATE_RESPONSE                         49
+#define ESPHOME_MSG_VALVE_COMMAND_REQUEST                        50
+#define ESPHOME_MSG_MEDIA_PLAYER_STATE_RESPONSE                  51
+#define ESPHOME_MSG_MEDIA_PLAYER_COMMAND_REQUEST                 52
+#define ESPHOME_MSG_ALARM_CONTROL_PANEL_STATE_RESPONSE           53
+#define ESPHOME_MSG_ALARM_CONTROL_PANEL_COMMAND_REQUEST          54
+#define ESPHOME_MSG_TEXT_STATE_RESPONSE                          55
+#define ESPHOME_MSG_TEXT_COMMAND_REQUEST                         56
+#define ESPHOME_MSG_DATE_STATE_RESPONSE                          57
+#define ESPHOME_MSG_DATE_COMMAND_REQUEST                         58
+#define ESPHOME_MSG_TIME_STATE_RESPONSE                          59
+#define ESPHOME_MSG_TIME_COMMAND_REQUEST                         60
+#define ESPHOME_MSG_DATETIME_STATE_RESPONSE                      61
+#define ESPHOME_MSG_DATETIME_COMMAND_REQUEST                     62
+#define ESPHOME_MSG_EVENT_RESPONSE                               63
+#define ESPHOME_MSG_UPDATE_STATE_RESPONSE                        64
+#define ESPHOME_MSG_UPDATE_COMMAND_REQUEST                       65
+
+/* Bluetooth Proxy Messages (66-93) */
+#define ESPHOME_MSG_SUBSCRIBE_BLUETOOTH_LE_ADVERTISEMENTS_REQUEST 66
+#define ESPHOME_MSG_BLUETOOTH_LE_ADVERTISEMENT_RESPONSE           67
+#define ESPHOME_MSG_BLUETOOTH_DEVICE_REQUEST                      68
+#define ESPHOME_MSG_BLUETOOTH_DEVICE_CONNECTION_RESPONSE          69
+#define ESPHOME_MSG_BLUETOOTH_GATT_GET_SERVICES_REQUEST           70
+#define ESPHOME_MSG_BLUETOOTH_GATT_GET_SERVICES_RESPONSE          71
+#define ESPHOME_MSG_BLUETOOTH_GATT_GET_SERVICES_DONE_RESPONSE     72
+#define ESPHOME_MSG_BLUETOOTH_GATT_READ_REQUEST                   73
+#define ESPHOME_MSG_BLUETOOTH_GATT_READ_RESPONSE                  74
+#define ESPHOME_MSG_BLUETOOTH_GATT_WRITE_REQUEST                  75
+#define ESPHOME_MSG_BLUETOOTH_GATT_READ_DESCRIPTOR_REQUEST        76
+#define ESPHOME_MSG_BLUETOOTH_GATT_WRITE_DESCRIPTOR_REQUEST       77
+#define ESPHOME_MSG_BLUETOOTH_GATT_NOTIFY_REQUEST                 78
+#define ESPHOME_MSG_BLUETOOTH_GATT_NOTIFY_DATA_RESPONSE           79
+#define ESPHOME_MSG_UNSUBSCRIBE_BLUETOOTH_LE_ADVERTISEMENTS_REQUEST 80
+#define ESPHOME_MSG_BLUETOOTH_DEVICE_PAIRING_RESPONSE             81
+#define ESPHOME_MSG_BLUETOOTH_DEVICE_UNPAIRING_RESPONSE           82
+#define ESPHOME_MSG_BLUETOOTH_DEVICE_CLEAR_CACHE_RESPONSE         83
+#define ESPHOME_MSG_SUBSCRIBE_BLUETOOTH_CONNECTIONS_FREE_REQUEST  84
+#define ESPHOME_MSG_BLUETOOTH_CONNECTIONS_FREE_RESPONSE           85
+#define ESPHOME_MSG_BLUETOOTH_GATT_GET_DESCRIPTOR_REQUEST         86
+#define ESPHOME_MSG_BLUETOOTH_GATT_DESCRIPTOR_RESPONSE            87
+#define ESPHOME_MSG_BLUETOOTH_GATT_NOTIFY_RESPONSE                88
+#define ESPHOME_MSG_BLUETOOTH_GATT_ERROR_RESPONSE                 89
+#define ESPHOME_MSG_BLUETOOTH_GATT_WRITE_RESPONSE                 90
+#define ESPHOME_MSG_BLUETOOTH_GATT_WRITE_DESCRIPTOR_RESPONSE      91
+#define ESPHOME_MSG_BLUETOOTH_LE_RAW_ADVERTISEMENTS_RESPONSE      93
+
+/* Voice Assistant Messages (94-103) */
+#define ESPHOME_MSG_SUBSCRIBE_VOICE_ASSISTANT_REQUEST             94
+#define ESPHOME_MSG_VOICE_ASSISTANT_RESPONSE                      95
+#define ESPHOME_MSG_VOICE_ASSISTANT_REQUEST                       96
+#define ESPHOME_MSG_VOICE_ASSISTANT_AUDIO                         97
+#define ESPHOME_MSG_VOICE_ASSISTANT_EVENT_RESPONSE                98
+#define ESPHOME_MSG_VOICE_ASSISTANT_ANNOUNCE_REQUEST              99
+#define ESPHOME_MSG_VOICE_ASSISTANT_ANNOUNCE_FINISHED            100
+#define ESPHOME_MSG_VOICE_ASSISTANT_CONFIGURATION_REQUEST        101
+#define ESPHOME_MSG_VOICE_ASSISTANT_CONFIGURATION_RESPONSE       102
+#define ESPHOME_MSG_VOICE_ASSISTANT_TIMER_EVENT_RESPONSE         103
 
 /* Maximum sizes */
 #define ESPHOME_MAX_STRING_LEN     128
@@ -92,19 +176,48 @@ typedef struct {
 #define BLE_FEATURE_CACHE_CLEARING    (1 << 4)  /* Cache clearing */
 #define BLE_FEATURE_RAW_ADVERTISEMENTS (1 << 5)  /* Raw advertisement data */
 
-typedef struct {
-    bool uses_password;
-    char name[ESPHOME_MAX_STRING_LEN];
-    char mac_address[24];
-    char esphome_version[32];
-    char compilation_time[64];
-    char model[ESPHOME_MAX_STRING_LEN];
-    char manufacturer[ESPHOME_MAX_STRING_LEN];
-    char friendly_name[ESPHOME_MAX_STRING_LEN];
-    bool has_deep_sleep;
-    char suggested_area[64];
+/* Voice Assistant Feature Flags (bitfield)
+ * See api.proto VoiceAssistantFeature enum for complete list
+ * TODO: Define specific flags when implementing voice_assistant plugin
+ */
+#define VOICE_ASSISTANT_FEATURE_VOICE_ASSISTANT (1 << 0)  /* Basic voice assistant support */
+#define VOICE_ASSISTANT_FEATURE_SPEAKER        (1 << 1)  /* Speaker support */
+#define VOICE_ASSISTANT_FEATURE_API_AUDIO      (1 << 2)  /* API audio streaming */
+#define VOICE_ASSISTANT_FEATURE_TIMERS         (1 << 3)  /* Timer support */
+
+/* Z-Wave Proxy Feature Flags (bitfield)
+ * See api.proto ZWaveProxyFeature enum for complete list
+ * TODO: Define specific flags when implementing zwave_proxy plugin
+ */
+
+typedef struct esphome_device_info_response {
+    /* Core fields - match api.proto DeviceInfoResponse */
+    bool uses_password;                      /* Field 1 */
+    char name[ESPHOME_MAX_STRING_LEN];       /* Field 2 */
+    char mac_address[24];                    /* Field 3 */
+    char esphome_version[32];                /* Field 4 */
+    char compilation_time[64];               /* Field 5 */
+    char model[ESPHOME_MAX_STRING_LEN];      /* Field 6 */
+    bool has_deep_sleep;                     /* Field 7 */
+    char project_name[ESPHOME_MAX_STRING_LEN];    /* Field 8 */
+    char project_version[ESPHOME_MAX_STRING_LEN]; /* Field 9 */
+    uint32_t webserver_port;                 /* Field 10 */
+    /* Note: Field 11 (legacy_bluetooth_proxy_version) deprecated - not included */
+    char manufacturer[ESPHOME_MAX_STRING_LEN];    /* Field 12 */
+    char friendly_name[ESPHOME_MAX_STRING_LEN];   /* Field 13 */
+    /* Note: Field 14 (legacy_voice_assistant_version) deprecated - not included */
     uint32_t bluetooth_proxy_feature_flags;  /* Field 15 - BLE proxy capabilities */
+    char suggested_area[64];                 /* Field 16 */
+    uint32_t voice_assistant_feature_flags;  /* Field 17 - Voice assistant capabilities */
     char bluetooth_mac_address[24];          /* Field 18 - Bluetooth MAC address */
+    bool api_encryption_supported;           /* Field 19 - API encryption support */
+    /* Note: Fields 20-22 are repeated/nested messages - not yet implemented:
+     *   20: devices (repeated DeviceInfo) - for multi-device proxies
+     *   21: areas (repeated AreaInfo) - area definitions
+     *   22: area (AreaInfo) - device's area
+     */
+    uint32_t zwave_proxy_feature_flags;      /* Field 23 - Z-Wave proxy capabilities */
+    uint32_t zwave_home_id;                  /* Field 24 - Z-Wave network home ID */
 } esphome_device_info_response_t;
 
 typedef struct {

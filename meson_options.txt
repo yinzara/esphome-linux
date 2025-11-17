@@ -1,0 +1,11 @@
+option('enable_plugins',
+  type: 'boolean',
+  value: true,
+  description: 'Enable plugin support (automatically detects plugins/ directory)'
+)
+
+option('enable_bluetooth_proxy',
+  type: 'boolean',
+  value: true,
+  description: 'Enable Bluetooth Proxy plugin (BLE scanning via BlueZ)'
+)

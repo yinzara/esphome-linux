@@ -1,0 +1,13 @@
+build/
+build-*/
+buildDir/
+.git/
+.idea/
+*.md
+.gitignore
+sysroot-*/
+build-deps/
+esphome-linux
+esphome-linux-*
+Dockerfile
+docker-compose.yml

@@ -56,3 +56,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - N/A (initial release)
 
 [0.0.1]: https://github.com/yinzara/esphome-linux/releases/tag/v0.0.1
+
+## [0.0.2] - 2025-01-17
+
+### Added
+- N/A (initial release)
+
+### Changed
+- meson.build to use relative plugin paths
+
+### Deprecated
+- N/A (initial release)
+
+### Removed
+- N/A (initial release)
+
+### Fixed
+- N/A (initial release)
+
+### Security
+- N/A (initial release)
+
+[0.0.2]: https://github.com/yinzara/esphome-linux/releases/tag/v0.0.2

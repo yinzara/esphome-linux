@@ -1,5 +1,5 @@
 project('esphome-linux', 'c',
-  version: '0.0.1',
+  version: '0.0.2',
   license: 'MIT',
   default_options: [
     'warning_level=2',

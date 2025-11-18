@@ -1,5 +1,5 @@
 project('esphome-linux', 'c',
-  version: '0.0.2',
+  version: '0.0.3',
   license: 'MIT',
   default_options: [
     'warning_level=2',
@@ -11,6 +11,7 @@ project('esphome-linux', 'c',
 # Dependencies - automatically uses pkg-config
 thread_dep = dependency('threads')
 dl_dep = meson.get_compiler('c').find_library('dl', required: false)
+deps = [thread_dep]
 
 # Conditional dependencies for Bluetooth Proxy
 if get_option('enable_bluetooth_proxy')
@@ -82,7 +83,6 @@ add_project_arguments(
 )
 
 # Build dependencies list
-deps = [thread_dep]
 if get_option('enable_bluetooth_proxy')
   deps += [dbus_dep, glib_dep]
 endif

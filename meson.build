@@ -52,9 +52,11 @@ if get_option('enable_plugins')
           message('Found plugin: ' + plugin_name)
 
           # Add plugin source files
+          # Convert absolute path to relative path for subdir()
+          plugin_rel_path = 'plugins' / plugin_name
           plugin_meson = plugin_dir / 'meson.build'
           if run_command('test', '-f', plugin_meson, check: false).returncode() == 0
-            subdir(plugin_dir)
+            subdir(plugin_rel_path)
           else
             # Simple plugin - just add C files
             plugin_c_files = run_command('find', plugin_dir, '-name', '*.c', check: false).stdout().strip().split('\n')

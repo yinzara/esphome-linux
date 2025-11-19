@@ -13,69 +13,106 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-/* ESPHome API Message Types */
-#define ESPHOME_MSG_HELLO_REQUEST                                1
-#define ESPHOME_MSG_HELLO_RESPONSE                               2
-#define ESPHOME_MSG_CONNECT_REQUEST                              3
-#define ESPHOME_MSG_CONNECT_RESPONSE                             4
-#define ESPHOME_MSG_DISCONNECT_REQUEST                           5
-#define ESPHOME_MSG_DISCONNECT_RESPONSE                          6
-#define ESPHOME_MSG_PING_REQUEST                                 7
-#define ESPHOME_MSG_PING_RESPONSE                                8
-#define ESPHOME_MSG_DEVICE_INFO_REQUEST                          9
-#define ESPHOME_MSG_DEVICE_INFO_RESPONSE                        10
-#define ESPHOME_MSG_LIST_ENTITIES_REQUEST                       11
-#define ESPHOME_MSG_LIST_ENTITIES_DONE_RESPONSE                 19
-#define ESPHOME_MSG_SUBSCRIBE_STATES_REQUEST                    20
-#define ESPHOME_MSG_SUBSCRIBE_HOMEASSISTANT_SERVICES_REQUEST    34
-#define ESPHOME_MSG_SUBSCRIBE_HOMEASSISTANT_STATES_REQUEST      38
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-/* Entity State Messages (20-39) */
-#define ESPHOME_MSG_BINARY_SENSOR_STATE_RESPONSE                 21
-#define ESPHOME_MSG_COVER_STATE_RESPONSE                         22
-#define ESPHOME_MSG_FAN_STATE_RESPONSE                           23
-#define ESPHOME_MSG_LIGHT_STATE_RESPONSE                         24
-#define ESPHOME_MSG_SENSOR_STATE_RESPONSE                        25
-#define ESPHOME_MSG_SWITCH_STATE_RESPONSE                        26
-#define ESPHOME_MSG_TEXT_SENSOR_STATE_RESPONSE                   27
-#define ESPHOME_MSG_SUBSCRIBE_HOMEASSISTANT_SERVICES_REQUEST     34
-#define ESPHOME_MSG_HOMEASSISTANT_SERVICE_RESPONSE               35
+/* ESPHome API Message Types - from api.proto */
 
-/* Entity Command Messages (30-33, 36-37, 40-65) */
-#define ESPHOME_MSG_COVER_COMMAND_REQUEST                        30
-#define ESPHOME_MSG_FAN_COMMAND_REQUEST                          31
-#define ESPHOME_MSG_LIGHT_COMMAND_REQUEST                        32
-#define ESPHOME_MSG_SWITCH_COMMAND_REQUEST                       33
-#define ESPHOME_MSG_HOMEASSISTANT_SERVICE_CALL                   36
-#define ESPHOME_MSG_HOMEASSISTANT_STATE_RESPONSE                 37
-#define ESPHOME_MSG_CLIMATE_STATE_RESPONSE                       40
-#define ESPHOME_MSG_CLIMATE_COMMAND_REQUEST                      41
-#define ESPHOME_MSG_NUMBER_STATE_RESPONSE                        42
-#define ESPHOME_MSG_NUMBER_COMMAND_REQUEST                       43
-#define ESPHOME_MSG_SELECT_STATE_RESPONSE                        44
-#define ESPHOME_MSG_SELECT_COMMAND_REQUEST                       45
-#define ESPHOME_MSG_BUTTON_COMMAND_REQUEST                       46
-#define ESPHOME_MSG_LOCK_STATE_RESPONSE                          47
-#define ESPHOME_MSG_LOCK_COMMAND_REQUEST                         48
-#define ESPHOME_MSG_VALVE_STATE_RESPONSE                         49
-#define ESPHOME_MSG_VALVE_COMMAND_REQUEST                        50
-#define ESPHOME_MSG_MEDIA_PLAYER_STATE_RESPONSE                  51
-#define ESPHOME_MSG_MEDIA_PLAYER_COMMAND_REQUEST                 52
-#define ESPHOME_MSG_ALARM_CONTROL_PANEL_STATE_RESPONSE           53
-#define ESPHOME_MSG_ALARM_CONTROL_PANEL_COMMAND_REQUEST          54
-#define ESPHOME_MSG_TEXT_STATE_RESPONSE                          55
-#define ESPHOME_MSG_TEXT_COMMAND_REQUEST                         56
-#define ESPHOME_MSG_DATE_STATE_RESPONSE                          57
-#define ESPHOME_MSG_DATE_COMMAND_REQUEST                         58
-#define ESPHOME_MSG_TIME_STATE_RESPONSE                          59
-#define ESPHOME_MSG_TIME_COMMAND_REQUEST                         60
-#define ESPHOME_MSG_DATETIME_STATE_RESPONSE                      61
-#define ESPHOME_MSG_DATETIME_COMMAND_REQUEST                     62
-#define ESPHOME_MSG_EVENT_RESPONSE                               63
-#define ESPHOME_MSG_UPDATE_STATE_RESPONSE                        64
-#define ESPHOME_MSG_UPDATE_COMMAND_REQUEST                       65
+/* Core Messages (1-11) */
+#define ESPHOME_MSG_HELLO_REQUEST                                  1
+#define ESPHOME_MSG_HELLO_RESPONSE                                 2
+#define ESPHOME_MSG_CONNECT_REQUEST                                3  /* AuthenticationRequest */
+#define ESPHOME_MSG_CONNECT_RESPONSE                               4  /* AuthenticationResponse */
+#define ESPHOME_MSG_DISCONNECT_REQUEST                             5
+#define ESPHOME_MSG_DISCONNECT_RESPONSE                            6
+#define ESPHOME_MSG_PING_REQUEST                                   7
+#define ESPHOME_MSG_PING_RESPONSE                                  8
+#define ESPHOME_MSG_DEVICE_INFO_REQUEST                            9
+#define ESPHOME_MSG_DEVICE_INFO_RESPONSE                          10
+#define ESPHOME_MSG_LIST_ENTITIES_REQUEST                         11
 
-/* Bluetooth Proxy Messages (66-93) */
+/* List Entities Responses (12-18) */
+#define ESPHOME_MSG_LIST_ENTITIES_BINARY_SENSOR_RESPONSE          12
+#define ESPHOME_MSG_LIST_ENTITIES_COVER_RESPONSE                  13
+#define ESPHOME_MSG_LIST_ENTITIES_FAN_RESPONSE                    14
+#define ESPHOME_MSG_LIST_ENTITIES_LIGHT_RESPONSE                  15
+#define ESPHOME_MSG_LIST_ENTITIES_SENSOR_RESPONSE                 16
+#define ESPHOME_MSG_LIST_ENTITIES_SWITCH_RESPONSE                 17
+#define ESPHOME_MSG_LIST_ENTITIES_TEXT_SENSOR_RESPONSE            18
+#define ESPHOME_MSG_LIST_ENTITIES_DONE_RESPONSE                   19
+
+/* State Subscriptions and Responses (20-27) */
+#define ESPHOME_MSG_SUBSCRIBE_STATES_REQUEST                      20
+#define ESPHOME_MSG_BINARY_SENSOR_STATE_RESPONSE                  21
+#define ESPHOME_MSG_COVER_STATE_RESPONSE                          22
+#define ESPHOME_MSG_FAN_STATE_RESPONSE                            23
+#define ESPHOME_MSG_LIGHT_STATE_RESPONSE                          24
+#define ESPHOME_MSG_SENSOR_STATE_RESPONSE                         25
+#define ESPHOME_MSG_SWITCH_STATE_RESPONSE                         26
+#define ESPHOME_MSG_TEXT_SENSOR_STATE_RESPONSE                    27
+
+/* Logs (28-29) */
+#define ESPHOME_MSG_SUBSCRIBE_LOGS_REQUEST                        28
+#define ESPHOME_MSG_SUBSCRIBE_LOGS_RESPONSE                       29
+
+/* Entity Commands (30-33) */
+#define ESPHOME_MSG_COVER_COMMAND_REQUEST                         30
+#define ESPHOME_MSG_FAN_COMMAND_REQUEST                           31
+#define ESPHOME_MSG_LIGHT_COMMAND_REQUEST                         32
+#define ESPHOME_MSG_SWITCH_COMMAND_REQUEST                        33
+
+/* Home Assistant Integration (34-42) */
+#define ESPHOME_MSG_SUBSCRIBE_HOMEASSISTANT_SERVICES_REQUEST      34
+#define ESPHOME_MSG_HOMEASSISTANT_ACTION_REQUEST                  35  /* HomeassistantActionRequest */
+#define ESPHOME_MSG_GET_TIME_REQUEST                              36
+#define ESPHOME_MSG_GET_TIME_RESPONSE                             37
+#define ESPHOME_MSG_SUBSCRIBE_HOMEASSISTANT_STATES_REQUEST        38
+#define ESPHOME_MSG_SUBSCRIBE_HOMEASSISTANT_STATE_RESPONSE        39
+#define ESPHOME_MSG_HOMEASSISTANT_STATE_RESPONSE                  40
+#define ESPHOME_MSG_LIST_ENTITIES_SERVICES_RESPONSE               41
+#define ESPHOME_MSG_EXECUTE_SERVICE_REQUEST                       42
+
+/* Camera (43-45) */
+#define ESPHOME_MSG_LIST_ENTITIES_CAMERA_RESPONSE                 43
+#define ESPHOME_MSG_CAMERA_IMAGE_RESPONSE                         44
+#define ESPHOME_MSG_CAMERA_IMAGE_REQUEST                          45
+
+/* Climate (46-48) */
+#define ESPHOME_MSG_LIST_ENTITIES_CLIMATE_RESPONSE                46
+#define ESPHOME_MSG_CLIMATE_STATE_RESPONSE                        47
+#define ESPHOME_MSG_CLIMATE_COMMAND_REQUEST                       48
+
+/* Number (49-51) */
+#define ESPHOME_MSG_LIST_ENTITIES_NUMBER_RESPONSE                 49
+#define ESPHOME_MSG_NUMBER_STATE_RESPONSE                         50
+#define ESPHOME_MSG_NUMBER_COMMAND_REQUEST                        51
+
+/* Select (52-54) */
+#define ESPHOME_MSG_LIST_ENTITIES_SELECT_RESPONSE                 52
+#define ESPHOME_MSG_SELECT_STATE_RESPONSE                         53
+#define ESPHOME_MSG_SELECT_COMMAND_REQUEST                        54
+
+/* Siren (55-57) */
+#define ESPHOME_MSG_LIST_ENTITIES_SIREN_RESPONSE                  55
+#define ESPHOME_MSG_SIREN_STATE_RESPONSE                          56
+#define ESPHOME_MSG_SIREN_COMMAND_REQUEST                         57
+
+/* Lock (58-60) */
+#define ESPHOME_MSG_LIST_ENTITIES_LOCK_RESPONSE                   58
+#define ESPHOME_MSG_LOCK_STATE_RESPONSE                           59
+#define ESPHOME_MSG_LOCK_COMMAND_REQUEST                          60
+
+/* Button (61-62) */
+#define ESPHOME_MSG_LIST_ENTITIES_BUTTON_RESPONSE                 61
+#define ESPHOME_MSG_BUTTON_COMMAND_REQUEST                        62
+
+/* Media Player (63-65) */
+#define ESPHOME_MSG_LIST_ENTITIES_MEDIA_PLAYER_RESPONSE           63
+#define ESPHOME_MSG_MEDIA_PLAYER_STATE_RESPONSE                   64
+#define ESPHOME_MSG_MEDIA_PLAYER_COMMAND_REQUEST                  65
+
+/* Bluetooth Proxy Messages (66-88, 93, 126-127) */
 #define ESPHOME_MSG_SUBSCRIBE_BLUETOOTH_LE_ADVERTISEMENTS_REQUEST 66
 #define ESPHOME_MSG_BLUETOOTH_LE_ADVERTISEMENT_RESPONSE           67
 #define ESPHOME_MSG_BLUETOOTH_DEVICE_REQUEST                      68
@@ -90,31 +127,81 @@
 #define ESPHOME_MSG_BLUETOOTH_GATT_WRITE_DESCRIPTOR_REQUEST       77
 #define ESPHOME_MSG_BLUETOOTH_GATT_NOTIFY_REQUEST                 78
 #define ESPHOME_MSG_BLUETOOTH_GATT_NOTIFY_DATA_RESPONSE           79
-#define ESPHOME_MSG_UNSUBSCRIBE_BLUETOOTH_LE_ADVERTISEMENTS_REQUEST 80
-#define ESPHOME_MSG_BLUETOOTH_DEVICE_PAIRING_RESPONSE             81
-#define ESPHOME_MSG_BLUETOOTH_DEVICE_UNPAIRING_RESPONSE           82
-#define ESPHOME_MSG_BLUETOOTH_DEVICE_CLEAR_CACHE_RESPONSE         83
-#define ESPHOME_MSG_SUBSCRIBE_BLUETOOTH_CONNECTIONS_FREE_REQUEST  84
-#define ESPHOME_MSG_BLUETOOTH_CONNECTIONS_FREE_RESPONSE           85
-#define ESPHOME_MSG_BLUETOOTH_GATT_GET_DESCRIPTOR_REQUEST         86
-#define ESPHOME_MSG_BLUETOOTH_GATT_DESCRIPTOR_RESPONSE            87
-#define ESPHOME_MSG_BLUETOOTH_GATT_NOTIFY_RESPONSE                88
-#define ESPHOME_MSG_BLUETOOTH_GATT_ERROR_RESPONSE                 89
-#define ESPHOME_MSG_BLUETOOTH_GATT_WRITE_RESPONSE                 90
-#define ESPHOME_MSG_BLUETOOTH_GATT_WRITE_DESCRIPTOR_RESPONSE      91
+#define ESPHOME_MSG_SUBSCRIBE_BLUETOOTH_CONNECTIONS_FREE_REQUEST  80
+#define ESPHOME_MSG_BLUETOOTH_CONNECTIONS_FREE_RESPONSE           81
+#define ESPHOME_MSG_BLUETOOTH_GATT_ERROR_RESPONSE                 82
+#define ESPHOME_MSG_BLUETOOTH_GATT_WRITE_RESPONSE                 83
+#define ESPHOME_MSG_BLUETOOTH_GATT_NOTIFY_RESPONSE                84
+#define ESPHOME_MSG_BLUETOOTH_DEVICE_PAIRING_RESPONSE             85
+#define ESPHOME_MSG_BLUETOOTH_DEVICE_UNPAIRING_RESPONSE           86
+#define ESPHOME_MSG_UNSUBSCRIBE_BLUETOOTH_LE_ADVERTISEMENTS_REQUEST 87
+#define ESPHOME_MSG_BLUETOOTH_DEVICE_CLEAR_CACHE_RESPONSE         88
 #define ESPHOME_MSG_BLUETOOTH_LE_RAW_ADVERTISEMENTS_RESPONSE      93
+#define ESPHOME_MSG_BLUETOOTH_SCANNER_STATE_RESPONSE             126
+#define ESPHOME_MSG_BLUETOOTH_SCANNER_SET_MODE_REQUEST           127
 
-/* Voice Assistant Messages (94-103) */
-#define ESPHOME_MSG_SUBSCRIBE_VOICE_ASSISTANT_REQUEST             94
-#define ESPHOME_MSG_VOICE_ASSISTANT_RESPONSE                      95
-#define ESPHOME_MSG_VOICE_ASSISTANT_REQUEST                       96
-#define ESPHOME_MSG_VOICE_ASSISTANT_AUDIO                         97
-#define ESPHOME_MSG_VOICE_ASSISTANT_EVENT_RESPONSE                98
-#define ESPHOME_MSG_VOICE_ASSISTANT_ANNOUNCE_REQUEST              99
-#define ESPHOME_MSG_VOICE_ASSISTANT_ANNOUNCE_FINISHED            100
-#define ESPHOME_MSG_VOICE_ASSISTANT_CONFIGURATION_REQUEST        101
-#define ESPHOME_MSG_VOICE_ASSISTANT_CONFIGURATION_RESPONSE       102
-#define ESPHOME_MSG_VOICE_ASSISTANT_TIMER_EVENT_RESPONSE         103
+/* Voice Assistant Messages (89-92, 106, 115, 119-123) */
+#define ESPHOME_MSG_SUBSCRIBE_VOICE_ASSISTANT_REQUEST             89
+#define ESPHOME_MSG_VOICE_ASSISTANT_REQUEST                       90
+#define ESPHOME_MSG_VOICE_ASSISTANT_RESPONSE                      91
+#define ESPHOME_MSG_VOICE_ASSISTANT_EVENT_RESPONSE                92
+#define ESPHOME_MSG_VOICE_ASSISTANT_AUDIO                        106
+#define ESPHOME_MSG_VOICE_ASSISTANT_TIMER_EVENT_RESPONSE         115
+#define ESPHOME_MSG_VOICE_ASSISTANT_ANNOUNCE_REQUEST             119
+#define ESPHOME_MSG_VOICE_ASSISTANT_ANNOUNCE_FINISHED            120
+#define ESPHOME_MSG_VOICE_ASSISTANT_CONFIGURATION_REQUEST        121
+#define ESPHOME_MSG_VOICE_ASSISTANT_CONFIGURATION_RESPONSE       122
+#define ESPHOME_MSG_VOICE_ASSISTANT_SET_CONFIGURATION            123
+
+/* Alarm Control Panel (94-96) */
+#define ESPHOME_MSG_LIST_ENTITIES_ALARM_CONTROL_PANEL_RESPONSE    94
+#define ESPHOME_MSG_ALARM_CONTROL_PANEL_STATE_RESPONSE            95
+#define ESPHOME_MSG_ALARM_CONTROL_PANEL_COMMAND_REQUEST           96
+
+/* Text (97-99) */
+#define ESPHOME_MSG_LIST_ENTITIES_TEXT_RESPONSE                   97
+#define ESPHOME_MSG_TEXT_STATE_RESPONSE                           98
+#define ESPHOME_MSG_TEXT_COMMAND_REQUEST                          99
+
+/* Date (100-102) */
+#define ESPHOME_MSG_LIST_ENTITIES_DATE_RESPONSE                  100
+#define ESPHOME_MSG_DATE_STATE_RESPONSE                          101
+#define ESPHOME_MSG_DATE_COMMAND_REQUEST                         102
+
+/* Time (103-105) */
+#define ESPHOME_MSG_LIST_ENTITIES_TIME_RESPONSE                  103
+#define ESPHOME_MSG_TIME_STATE_RESPONSE                          104
+#define ESPHOME_MSG_TIME_COMMAND_REQUEST                         105
+
+/* Event (107-108) */
+#define ESPHOME_MSG_LIST_ENTITIES_EVENT_RESPONSE                 107
+#define ESPHOME_MSG_EVENT_RESPONSE                               108
+
+/* Valve (109-111) */
+#define ESPHOME_MSG_LIST_ENTITIES_VALVE_RESPONSE                 109
+#define ESPHOME_MSG_VALVE_STATE_RESPONSE                         110
+#define ESPHOME_MSG_VALVE_COMMAND_REQUEST                        111
+
+/* DateTime (112-114) */
+#define ESPHOME_MSG_LIST_ENTITIES_DATETIME_RESPONSE              112
+#define ESPHOME_MSG_DATETIME_STATE_RESPONSE                      113
+#define ESPHOME_MSG_DATETIME_COMMAND_REQUEST                     114
+
+/* Update (116-118) */
+#define ESPHOME_MSG_LIST_ENTITIES_UPDATE_RESPONSE                116
+#define ESPHOME_MSG_UPDATE_STATE_RESPONSE                        117
+#define ESPHOME_MSG_UPDATE_COMMAND_REQUEST                       118
+
+/* Noise Encryption (124-125) */
+#define ESPHOME_MSG_NOISE_ENCRYPTION_SET_KEY_REQUEST             124
+#define ESPHOME_MSG_NOISE_ENCRYPTION_SET_KEY_RESPONSE            125
+
+/* Z-Wave Proxy (128-129) */
+#define ESPHOME_MSG_ZWAVE_PROXY_FRAME                            128
+#define ESPHOME_MSG_ZWAVE_PROXY_REQUEST                          129
+
+/* Home Assistant Action Response (130) */
+#define ESPHOME_MSG_HOMEASSISTANT_ACTION_RESPONSE                130
 
 /* Maximum sizes */
 #define ESPHOME_MAX_STRING_LEN     128
@@ -334,5 +421,9 @@ size_t esphome_frame_message(uint8_t *out_buf, size_t out_size,
 /* Decode message header (returns payload offset, or 0 on error) */
 size_t esphome_decode_frame_header(const uint8_t *buf, size_t size,
                                     uint32_t *msg_len, uint16_t *msg_type);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* ESPHOME_PROTO_H */

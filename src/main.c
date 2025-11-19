@@ -18,6 +18,7 @@
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include "include/esphome_api.h"
+#include "include/esphome_plugin_internal.h"
 
 #define PROGRAM_NAME "esphome-linux"
 #define VERSION "1.0.0"
@@ -129,9 +130,11 @@ int main(int argc, char *argv[]) {
     printf("ESPHome API server started successfully\n");
     printf("Listening on port 6053\n");
 
-    /* mDNS advertisement is handled by init script */
+    /* Initialize all registered plugins */
+    if (esphome_plugin_init_all(api_server, &config) < 0) {
+        fprintf(stderr, "Warning: Some plugins failed to initialize\n");
+    }
 
-    /* Plugins (like bluetooth_proxy) will auto-initialize via constructor */
     printf("Plugins loaded and ready\n");
 
     printf("Press Ctrl+C to stop\n\n");
@@ -144,7 +147,8 @@ int main(int argc, char *argv[]) {
     /* Cleanup */
     printf("\nShutting down...\n");
 
-    /* Plugins will auto-cleanup via destructors */
+    /* Cleanup all plugins */
+    esphome_plugin_cleanup_all(api_server, &config);
 
     esphome_api_stop(api_server);
     esphome_api_free(api_server);

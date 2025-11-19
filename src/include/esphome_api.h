@@ -97,4 +97,18 @@ int esphome_api_broadcast(esphome_api_server_t *server,
                           const uint8_t *payload,
                           size_t payload_len);
 
+/**
+ * Get the hostname/IP address of a connected client
+ *
+ * @param server API server instance
+ * @param client_id Client index (0-based)
+ * @param host_buf Buffer to store the hostname/IP string
+ * @param host_buf_size Size of the buffer
+ * @return 0 on success, -1 on error
+ */
+int esphome_api_get_client_host(esphome_api_server_t *server,
+                                 int client_id,
+                                 char *host_buf,
+                                 size_t host_buf_size);
+
 #endif /* ESPHOME_API_H */

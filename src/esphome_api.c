@@ -33,6 +33,7 @@ typedef struct {
     pthread_t thread;
     bool thread_running;
     struct esphome_api_server *server;
+    struct sockaddr_in addr;  /* Client's IP address */
 } client_connection_t;
 
 /**
@@ -340,6 +341,7 @@ static void handle_subscribe_homeassistant_states(esphome_api_server_t *server,
 
 static void dispatch_message(esphome_api_server_t *server,
                               client_connection_t *client,
+                              int client_id,
                               uint16_t msg_type,
                               const uint8_t *payload, size_t payload_len) {
     printf(LOG_PREFIX "<<< Received %s (type=%u, payload=%zu bytes)\n",
@@ -375,7 +377,7 @@ static void dispatch_message(esphome_api_server_t *server,
             break;
         default:
             /* Try delegating to plugins */
-            if (esphome_plugin_handle_message(server, &server->config, msg_type, payload, payload_len) < 0) {
+            if (esphome_plugin_handle_message(server, &server->config, client_id, msg_type, payload, payload_len) < 0) {
                 printf(LOG_PREFIX "!!! Unhandled message type: %u (%s)\n",
                        msg_type, message_type_name(msg_type));
             }
@@ -388,7 +390,8 @@ static void dispatch_message(esphome_api_server_t *server,
  * ----------------------------------------------------------------- */
 
 static void handle_client_data(esphome_api_server_t *server,
-                                client_connection_t *client) {
+                                client_connection_t *client,
+                                int client_id) {
     while (client->recv_pos > 0) {
         uint32_t msg_len;
         uint16_t msg_type;
@@ -435,7 +438,7 @@ static void handle_client_data(esphome_api_server_t *server,
         const uint8_t *payload = client->recv_buffer + header_len;
         size_t payload_len = msg_len;
 
-        dispatch_message(server, client, msg_type, payload, payload_len);
+        dispatch_message(server, client, client_id, msg_type, payload, payload_len);
 
         /* Remove processed message from buffer */
         memmove(client->recv_buffer, client->recv_buffer + total_len,
@@ -465,6 +468,7 @@ static void *client_thread(void *arg) {
 static void *client_thread_func(void *arg) {
     client_connection_t *client = (client_connection_t *)arg;
     esphome_api_server_t *server = client->server;
+    int client_id = (int)(client - server->clients);  /* Calculate client index */
 
     /* Handle client messages */
     while (server->running && client->fd >= 0) {
@@ -485,7 +489,7 @@ static void *client_thread_func(void *arg) {
                received, client->recv_pos + received);
 
         client->recv_pos += received;
-        handle_client_data(server, client);
+        handle_client_data(server, client, client_id);
     }
 
     /* Cleanup client */
@@ -545,6 +549,7 @@ static void *listen_thread_func(void *arg) {
         client_connection_t *client = &server->clients[slot];
         client->server = server;
         client->thread_running = true;
+        client->addr = client_addr;  /* Store client address */
 
         if (pthread_create(&client->thread, NULL, client_thread_func, client) != 0) {
             fprintf(stderr, LOG_PREFIX "Failed to create client thread\n");
@@ -723,4 +728,39 @@ int esphome_api_broadcast(esphome_api_server_t *server,
     pthread_mutex_unlock(&server->clients_mutex);
 
     return sent_count;
+}
+
+/**
+ * Get the hostname/IP address of a connected client
+ */
+int esphome_api_get_client_host(esphome_api_server_t *server,
+                                 int client_id,
+                                 char *host_buf,
+                                 size_t host_buf_size) {
+    if (!server || !host_buf || host_buf_size == 0 ||
+        client_id < 0 || client_id >= ESPHOME_MAX_CLIENTS) {
+        return -1;
+    }
+
+    pthread_mutex_lock(&server->clients_mutex);
+
+    client_connection_t *client = &server->clients[client_id];
+    if (client->fd < 0) {
+        pthread_mutex_unlock(&server->clients_mutex);
+        return -1;
+    }
+
+    /* Convert IP address to string */
+    const char *ip_str = inet_ntoa(client->addr.sin_addr);
+    if (!ip_str) {
+        pthread_mutex_unlock(&server->clients_mutex);
+        return -1;
+    }
+
+    strncpy(host_buf, ip_str, host_buf_size - 1);
+    host_buf[host_buf_size - 1] = '\0';
+
+    pthread_mutex_unlock(&server->clients_mutex);
+
+    return 0;
 }

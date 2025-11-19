@@ -1033,6 +1033,24 @@ void ble_scanner_free(ble_scanner_t *scanner) {
     }
 
     if (scanner->dbus_conn) {
+        /* Remove the filter we added during init */
+        dbus_connection_remove_filter(scanner->dbus_conn, properties_changed_filter, scanner);
+
+        /* Remove the match rule we added during init */
+        DBusError error;
+        dbus_error_init(&error);
+        dbus_bus_remove_match(scanner->dbus_conn,
+                              "type='signal',interface='org.freedesktop.DBus.Properties'",
+                              &error);
+        if (dbus_error_is_set(&error)) {
+            fprintf(stderr, LOG_PREFIX "Failed to remove match: %s\n", error.message);
+            dbus_error_free(&error);
+        }
+
+        /* Flush any pending outgoing messages */
+        dbus_connection_flush(scanner->dbus_conn);
+
+        /* Now we can safely unref the connection */
         dbus_connection_unref(scanner->dbus_conn);
     }
 

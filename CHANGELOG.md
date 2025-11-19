@@ -99,4 +99,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - N/A (initial release)
 
-[0.0.2]: https://github.com/yinzara/esphome-linux/releases/tag/v0.0.3
+[0.0.3]: https://github.com/yinzara/esphome-linux/releases/tag/v0.0.3
+
+## [0.0.4] - 2025-01-18
+
+### Added
+- C++ plugin support
+
+### Changed
+- N/A
+
+### Deprecated
+- N/A
+
+### Removed
+- N/A
+
+### Fixed
+- Plugin implementation and proper protobuf header numbering of messages
+
+### Security
+- N/A
+
+[0.0.4]: https://github.com/yinzara/esphome-linux/releases/tag/v0.0.4

@@ -248,6 +248,11 @@ static int handle_subscribe_ble_advertisements(esphome_plugin_context_t *ctx) {
 
     printf("[bluetooth_proxy] Received SUBSCRIBE_BLUETOOTH_LE_ADVERTISEMENTS_REQUEST\n");
 
+    if (!state) {
+        fprintf(stderr, "[bluetooth_proxy] Cannot subscribe: plugin state not initialized\n");
+        return -1;
+    }
+
     if (!state->scanner) {
         fprintf(stderr, "[bluetooth_proxy] Cannot subscribe: BLE scanner not initialized\n");
         return -1;
@@ -277,7 +282,7 @@ static int handle_unsubscribe_ble_advertisements(esphome_plugin_context_t *ctx) 
 
     printf("[bluetooth_proxy] Received UNSUBSCRIBE_BLUETOOTH_LE_ADVERTISEMENTS_REQUEST\n");
 
-    if (!state->scanner) {
+    if (!state || !state->scanner) {
         return 0; /* Nothing to do */
     }
 
@@ -299,9 +304,11 @@ static int handle_unsubscribe_ble_advertisements(esphome_plugin_context_t *ctx) 
  * Message handler - called for each incoming message
  */
 static int bluetooth_proxy_handle_message(esphome_plugin_context_t *ctx,
+                                           int client_id,
                                            uint32_t msg_type,
                                            const uint8_t *data,
                                            size_t len) {
+    (void)client_id;  /* Currently unused, but available for future use */
     (void)data;  /* Unused for these message types */
     (void)len;
 

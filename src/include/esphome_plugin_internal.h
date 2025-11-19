@@ -83,6 +83,7 @@ int esphome_plugin_list_entities_all(
  *
  * @param server API server instance
  * @param config Device configuration
+ * @param client_id ID of the client that sent the message
  * @param msg_type ESPHome Native API message type
  * @param data Message payload
  * @param len Length of payload
@@ -91,6 +92,7 @@ int esphome_plugin_list_entities_all(
 int esphome_plugin_handle_message(
     esphome_api_server_t *server,
     const esphome_device_config_t *config,
+    int client_id,
     uint32_t msg_type,
     const uint8_t *data,
     size_t len);

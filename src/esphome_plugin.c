@@ -7,6 +7,7 @@
 #include "include/esphome_api.h"
 #include "include/esphome_proto.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdarg.h>
 
 #define LOG_PREFIX "[plugin-manager] "
@@ -50,15 +51,25 @@ int esphome_plugin_init_all(esphome_api_server_t *server, const esphome_device_c
         printf(LOG_PREFIX "Initializing %s...\n", plugin->name);
 
         if (plugin->init) {
-            esphome_plugin_context_t ctx = {
-                .server = server,
-                .config = config,
-                .plugin_data = NULL
-            };
-
-            if (plugin->init(&ctx) < 0) {
-                fprintf(stderr, LOG_PREFIX "Failed to initialize plugin: %s\n", plugin->name);
+            /* Allocate persistent context for this plugin */
+            esphome_plugin_context_t *ctx = calloc(1, sizeof(esphome_plugin_context_t));
+            if (!ctx) {
+                fprintf(stderr, LOG_PREFIX "Failed to allocate context for plugin: %s\n", plugin->name);
                 failed++;
+                continue;
+            }
+
+            ctx->server = server;
+            ctx->config = config;
+            ctx->plugin_data = NULL;
+
+            if (plugin->init(ctx) < 0) {
+                fprintf(stderr, LOG_PREFIX "Failed to initialize plugin: %s\n", plugin->name);
+                free(ctx);
+                failed++;
+            } else {
+                /* Store the context in the plugin for later use */
+                plugin->ctx = ctx;
             }
         }
     }
@@ -71,18 +82,19 @@ int esphome_plugin_init_all(esphome_api_server_t *server, const esphome_device_c
  * Cleanup all plugins
  */
 void esphome_plugin_cleanup_all(esphome_api_server_t *server, const esphome_device_config_t *config) {
+    (void)server;
+    (void)config;
+
     printf(LOG_PREFIX "Cleaning up plugins...\n");
 
     for (esphome_plugin_t *plugin = plugins_head; plugin != NULL; plugin = plugin->next) {
-        if (plugin->cleanup) {
-            esphome_plugin_context_t ctx = {
-                .server = server,
-                .config = config,
-                .plugin_data = NULL
-            };
-
+        if (plugin->cleanup && plugin->ctx) {
             printf(LOG_PREFIX "Cleaning up %s...\n", plugin->name);
-            plugin->cleanup(&ctx);
+            plugin->cleanup(plugin->ctx);
+
+            /* Free the persistent context */
+            free(plugin->ctx);
+            plugin->ctx = NULL;
         }
     }
 }
@@ -96,16 +108,13 @@ int esphome_plugin_configure_device_info_all(
     const esphome_device_config_t *config,
     esphome_device_info_response_t *device_info)
 {
-    for (esphome_plugin_t *plugin = plugins_head; plugin != NULL; plugin = plugin->next) {
-        if (plugin->configure_device_info) {
-            esphome_plugin_context_t ctx = {
-                .server = server,
-                .config = config,
-                .plugin_data = NULL
-            };
+    (void)server;
+    (void)config;
 
+    for (esphome_plugin_t *plugin = plugins_head; plugin != NULL; plugin = plugin->next) {
+        if (plugin->configure_device_info && plugin->ctx) {
             printf(LOG_PREFIX "Plugin %s configuring device info...\n", plugin->name);
-            if (plugin->configure_device_info(&ctx, device_info) < 0) {
+            if (plugin->configure_device_info(plugin->ctx, device_info) < 0) {
                 fprintf(stderr, LOG_PREFIX "Warning: Plugin %s failed to configure device info\n",
                         plugin->name);
             }
@@ -124,16 +133,13 @@ int esphome_plugin_list_entities_all(
     const esphome_device_config_t *config,
     int client_id)
 {
-    for (esphome_plugin_t *plugin = plugins_head; plugin != NULL; plugin = plugin->next) {
-        if (plugin->list_entities) {
-            esphome_plugin_context_t ctx = {
-                .server = server,
-                .config = config,
-                .plugin_data = NULL
-            };
+    (void)server;
+    (void)config;
 
+    for (esphome_plugin_t *plugin = plugins_head; plugin != NULL; plugin = plugin->next) {
+        if (plugin->list_entities && plugin->ctx) {
             printf(LOG_PREFIX "Plugin %s listing entities...\n", plugin->name);
-            if (plugin->list_entities(&ctx, client_id) < 0) {
+            if (plugin->list_entities(plugin->ctx, client_id) < 0) {
                 fprintf(stderr, LOG_PREFIX "Warning: Plugin %s failed to list entities\n",
                         plugin->name);
             }
@@ -150,19 +156,17 @@ int esphome_plugin_list_entities_all(
 int esphome_plugin_handle_message(
     esphome_api_server_t *server,
     const esphome_device_config_t *config,
+    int client_id,
     uint32_t msg_type,
     const uint8_t *data,
     size_t len)
 {
-    for (esphome_plugin_t *plugin = plugins_head; plugin != NULL; plugin = plugin->next) {
-        if (plugin->handle_message) {
-            esphome_plugin_context_t ctx = {
-                .server = server,
-                .config = config,
-                .plugin_data = NULL
-            };
+    (void)server;
+    (void)config;
 
-            int result = plugin->handle_message(&ctx, msg_type, data, len);
+    for (esphome_plugin_t *plugin = plugins_head; plugin != NULL; plugin = plugin->next) {
+        if (plugin->handle_message && plugin->ctx) {
+            int result = plugin->handle_message(plugin->ctx, client_id, msg_type, data, len);
             if (result == 0) {
                 /* Message was handled by this plugin */
                 return 0;
@@ -206,6 +210,22 @@ int esphome_plugin_send_message_to_client(
     }
 
     return esphome_api_send_to_client(ctx->server, client_id, (uint16_t)msg_type, data, len);
+}
+
+/**
+ * Get the hostname/IP address of a connected client
+ */
+int esphome_plugin_get_client_host(
+    esphome_plugin_context_t *ctx,
+    int client_id,
+    char *host_buf,
+    size_t host_buf_size)
+{
+    if (!ctx || !ctx->server) {
+        return -1;
+    }
+
+    return esphome_api_get_client_host(ctx->server, client_id, host_buf, host_buf_size);
 }
 
 /**

@@ -47,6 +47,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Forward declarations */
 typedef struct esphome_api_server esphome_api_server_t;
 typedef struct esphome_device_config esphome_device_config_t;
@@ -91,12 +95,14 @@ typedef void (*esphome_plugin_cleanup_fn)(esphome_plugin_context_t *ctx);
  * Return 0 if the message was handled, -1 if not recognized.
  *
  * @param ctx Plugin context
+ * @param client_id ID of the client that sent the message (0-indexed)
  * @param msg_type ESPHome Native API message type
  * @param data Message payload
  * @param len Length of payload
  * @return 0 if handled, -1 if not handled
  */
 typedef int (*esphome_plugin_msg_handler_fn)(esphome_plugin_context_t *ctx,
+                                               int client_id,
                                                uint32_t msg_type,
                                                const uint8_t *data,
                                                size_t len);
@@ -156,6 +162,7 @@ struct esphome_plugin {
     esphome_plugin_configure_device_info_fn configure_device_info; /* Device info config (optional) */
     esphome_plugin_list_entities_fn list_entities; /* Entity registration (optional) */
     esphome_plugin_t *next;                  /* Linked list (internal use) */
+    esphome_plugin_context_t *ctx;           /* Persistent context (internal use) */
 };
 
 /**
@@ -196,6 +203,20 @@ int esphome_plugin_send_message_to_client(esphome_plugin_context_t *ctx,
                                            uint32_t msg_type,
                                            const uint8_t *data,
                                            size_t len);
+
+/**
+ * Get the hostname/IP address of a connected client
+ *
+ * @param ctx Plugin context
+ * @param client_id Client ID (0-indexed)
+ * @param host_buf Buffer to store the hostname/IP string
+ * @param host_buf_size Size of the buffer
+ * @return 0 on success, -1 on error
+ */
+int esphome_plugin_get_client_host(esphome_plugin_context_t *ctx,
+                                    int client_id,
+                                    char *host_buf,
+                                    size_t host_buf_size);
 
 /**
  * Log a message (convenience wrapper)
@@ -241,5 +262,8 @@ void esphome_plugin_log(esphome_plugin_context_t *ctx,
         esphome_plugin_register(&var_name); \
     }
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* ESPHOME_PLUGIN_H */

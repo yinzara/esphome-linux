@@ -1,9 +1,10 @@
-project('esphome-linux', 'c',
-  version: '0.0.3',
+project('esphome-linux', ['c', 'cpp'],
+  version: '0.0.4',
   license: 'MIT',
   default_options: [
     'warning_level=2',
     'c_std=c11',
+    'cpp_std=c++11',
     'buildtype=release',
   ],
 )
@@ -80,6 +81,10 @@ all_sources = core_sources + plugin_sources
 add_project_arguments(
   '-D_GNU_SOURCE',
   language: 'c'
+)
+add_project_arguments(
+  '-D_GNU_SOURCE',
+  language: 'cpp'
 )
 
 # Build dependencies list

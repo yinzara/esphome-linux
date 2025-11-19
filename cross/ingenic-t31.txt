@@ -1,5 +1,6 @@
 [binaries]
 c = 'mips-linux-gnu-gcc'
+cpp = 'mips-linux-gnu-g++'
 ar = 'mips-linux-gnu-ar'
 strip = 'mips-linux-gnu-strip'
 pkgconfig = 'pkg-config'
@@ -7,6 +8,8 @@ pkgconfig = 'pkg-config'
 [built-in options]
 c_args = ['-EL', '-march=mips32r2', '-I/sysroot/usr/include']
 c_link_args = ['-EL', '-L/sysroot/usr/lib', '-Wl,-rpath-link,/sysroot/usr/lib']
+cpp_args = ['-EL', '-march=mips32r2', '-I/sysroot/usr/include']
+cpp_link_args = ['-EL', '-L/sysroot/usr/lib', '-Wl,-rpath-link,/sysroot/usr/lib']
 
 [properties]
 sys_root = '/sysroot'

@@ -41,13 +41,17 @@ elif not libblepp_dep.found()
     # Also need to link Nimble and Bluetooth libraries if libblepp was built with them
     libblepp_deps = [libblepp_lib]
 
-    # Try to find Nimble library (required by libblepp)
-    libnimble = cpp_compiler.find_library('nimble', required: true)
-    libblepp_deps += libnimble
+    # Try to find Nimble library (required by libblepp for Nimble support)
+    libnimble = cpp_compiler.find_library('nimble', required: false)
+    if libnimble.found()
+        libblepp_deps += libnimble
+    endif
 
     # Try to find Bluetooth library (required by libblepp for BlueZ support)
-    libbluetooth = cpp_compiler.find_library('bluetooth', required: true)
-    libblepp_deps += libbluetooth
+    libbluetooth = cpp_compiler.find_library('bluetooth', required: false)
+    if libbluetooth.found()
+        libblepp_deps += libbluetooth
+    endif
 
     libblepp_dep = declare_dependency(
       dependencies: libblepp_deps

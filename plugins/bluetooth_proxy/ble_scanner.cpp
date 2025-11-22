@@ -360,6 +360,30 @@ ble_scanner_t *ble_scanner_init(ble_advert_callback_t callback, void *user_data)
     memset(scanner->device_cache, 0, sizeof(scanner->device_cache));
     pthread_mutex_init(&scanner->cache_mutex, NULL);
 
+    /* Set BLEPP log level from environment variable */
+    const char *log_level_env = getenv("LOG_LEVEL");
+    if (log_level_env != nullptr) {
+        if (strcasecmp(log_level_env, "Debug") == 0) {
+            BLEPP::log_level = BLEPP::Debug;
+            printf(LOG_PREFIX "BLEPP log level set to Debug\n");
+        } else if (strcasecmp(log_level_env, "Info") == 0) {
+            BLEPP::log_level = BLEPP::Info;
+            printf(LOG_PREFIX "BLEPP log level set to Info\n");
+        } else if (strcasecmp(log_level_env, "Warning") == 0) {
+            BLEPP::log_level = BLEPP::Warning;
+            printf(LOG_PREFIX "BLEPP log level set to Warning\n");
+        } else if (strcasecmp(log_level_env, "Error") == 0) {
+            BLEPP::log_level = BLEPP::Error;
+            printf(LOG_PREFIX "BLEPP log level set to Error\n");
+        } else {
+            printf(LOG_PREFIX "Unknown LOG_LEVEL '%s', valid values are Info, Debug, Warning and Error. using default (Info)\n", log_level_env);
+            BLEPP::log_level = BLEPP::Info;
+        }
+    } else {
+        /* Default to Info level if not set */
+        BLEPP::log_level = BLEPP::Info;
+    }
+
     /* Create BLE client transport */
     try {
         scanner->transport = BLEPP::create_client_transport();

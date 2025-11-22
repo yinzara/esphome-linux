@@ -3,11 +3,28 @@ set -e
 
 LIBBLEPP_REPO="https://github.com/yinzara/libblepp.git"
 LIBBLEPP_DIR="libblepp"
+LIBBLEPP_TAG="v0.0.1"
 
 # Clone libblepp repository if not already present
 if [ ! -d "$LIBBLEPP_DIR" ]; then
     echo "Cloning libblepp repository..."
     git clone "$LIBBLEPP_REPO" "$LIBBLEPP_DIR"
+    cd "$LIBBLEPP_DIR"
+    echo "Checking out tag ${LIBBLEPP_TAG}..."
+    git checkout "$LIBBLEPP_TAG"
+    cd ..
+else
+    # Ensure we're on the correct tag
+    cd "$LIBBLEPP_DIR"
+    CURRENT_TAG=$(git describe --tags --exact-match 2>/dev/null || echo "")
+    if [ "$CURRENT_TAG" != "$LIBBLEPP_TAG" ]; then
+        echo "Checking out tag ${LIBBLEPP_TAG}..."
+        git fetch --tags
+        git checkout "$LIBBLEPP_TAG"
+    else
+        echo "Already on correct tag ${LIBBLEPP_TAG}"
+    fi
+    cd ..
 fi
 
 # Get the absolute paths to dependency output directories

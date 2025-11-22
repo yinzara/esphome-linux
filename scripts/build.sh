@@ -23,13 +23,15 @@ usage() {
     echo "  --x86_64         Build for x86_64"
     echo "  --arm64          Build for ARM64"
     echo "  --mips           Build for Ingenic T31 MIPS"
-    echo "  --all            Build for all architectures"
+    echo "  --docker         Build runtime Docker image for native platform"
+    echo "  --all            Build for all architectures and Docker image"
     echo "  --help           Show this help message"
     echo ""
     echo "Examples:"
     echo "  $0 --native      # Build for current architecture"
     echo "  $0 --mips        # Build for MIPS only"
-    echo "  $0 --all         # Build all architectures"
+    echo "  $0 --docker      # Build Docker runtime image"
+    echo "  $0 --all         # Build all architectures and Docker image"
 }
 
 build_native() {
@@ -156,6 +158,51 @@ build_mips() {
     fi
 }
 
+build_docker() {
+    echo -e "${GREEN}Building runtime Docker image for native platform...${NC}"
+    cd "${PROJECT_ROOT}"
+
+    # Get native architecture
+    NATIVE_ARCH=$(uname -m)
+
+    # Map to Docker platform
+    case "$NATIVE_ARCH" in
+        x86_64)
+            DOCKER_PLATFORM="linux/amd64"
+            ;;
+        aarch64|arm64)
+            DOCKER_PLATFORM="linux/arm64"
+            ;;
+        *)
+            echo -e "${RED}✗ Unsupported architecture for Docker build: $NATIVE_ARCH${NC}"
+            return 1
+            ;;
+    esac
+
+    # Extract version from meson.build
+    VERSION=$(grep "version:" meson.build | head -1 | sed "s/.*version: '\(.*\)'.*/\1/")
+    echo -e "${BLUE}Building Docker image version: ${VERSION}${NC}"
+
+    # Build runtime Docker image
+    docker buildx build \
+        --platform "$DOCKER_PLATFORM" \
+        -f Dockerfile \
+        --target runtime \
+        -t esphome-linux:latest \
+        -t esphome-linux:"${VERSION}" \
+        --load \
+        .
+
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✓ Docker image built successfully${NC}"
+        echo -e "${GREEN}Tags: esphome-linux:latest, esphome-linux:${VERSION}${NC}"
+        docker images esphome-linux
+    else
+        echo -e "${RED}✗ Docker build failed${NC}"
+        return 1
+    fi
+}
+
 build_all() {
     echo -e "${BLUE}Building for all architectures...${NC}"
 
@@ -171,6 +218,9 @@ build_all() {
         echo -e "${BLUE}Also building for native architecture (${NATIVE_ARCH})...${NC}"
         build_native
     fi
+
+    # Build Docker image
+    build_docker
 
     echo -e "${GREEN}All builds complete!${NC}"
     echo -e "${GREEN}Binaries:${NC}"
@@ -195,6 +245,9 @@ case "$1" in
         ;;
     --mips)
         build_mips
+        ;;
+    --docker)
+        build_docker
         ;;
     --all)
         build_all

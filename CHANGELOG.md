@@ -188,3 +188,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - N/A
 
 [0.0.7]: https://github.com/yinzara/esphome-linux/releases/tag/v0.0.7
+
+## [0.0.8] - 2025-01-22
+
+### Added
+- LOG_LEVEL environment variable support for LibBLE++
+
+### Changed
+- N/A
+
+### Deprecated
+- N/A
+
+### Removed
+- N/A
+
+### Fixed
+- HCI/BlueZ support fixed in LibBLE++ dependency
+
+### Security
+- N/A
+
+[0.0.8]: https://github.com/yinzara/esphome-linux/releases/tag/v0.0.8

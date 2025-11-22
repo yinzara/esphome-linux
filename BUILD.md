@@ -22,6 +22,7 @@ The easiest way to build is using the provided build script:
 ./scripts/build.sh --x86_64   # For x86_64
 ./scripts/build.sh --arm64    # For ARM64
 ./scripts/build.sh --mips     # For Ingenic T31 MIPS
+./scripts/build.sh --docker   # Native Docker image
 
 # Build for native architecture (default)
 ./scripts/build.sh
@@ -185,6 +186,11 @@ After each successful build, artifacts are uploaded:
 - `esphome-linux-arm64`
 - `esphome-linux-mips`
 
+### Dockerhub
+
+After each successful build the native Docker images are pushed to Dockerhub:
+- `yinzara/esphome-linux` (linux/arm64 and linux/amd64 architectures)
+
 ### SDK Caching
 
 The GitHub Actions workflow caches the Ingenic SDK to speed up builds:
@@ -210,22 +216,6 @@ export TOOLCHAIN_NAME=mips-gcc540-glibc222-64bit-r3.3.0
 export TARGET_ARCH=mips32r2
 export TARGET_ENDIAN=EL
 ./scripts/build-ingenic-t31.sh
-
-# Dependency versions
-export GLIB_VERSION=2.56.4
-export DBUS_VERSION=1.12.20
-./scripts/build-ingenic-t31.sh
-```
-
-### Docker Build Arguments
-
-```bash
-docker build \
-    --build-arg GLIB_VERSION=2.56.4 \
-    --build-arg DBUS_VERSION=1.12.20 \
-    --build-arg TARGET_ARCH=mips32r2 \
-    -f cross.Dockerfile \
-    .
 ```
 
 ## Verifying Builds
@@ -320,8 +310,8 @@ docker build --no-cache -f cross.Dockerfile .
 
 When developing, the Docker layer caching significantly speeds up builds:
 
-1. **First build**: All dependencies are built (~30-40 min)
-2. **Code changes**: Only application layer rebuilds (~1-2 min)
+1. **First build**: All dependencies are built (~5 min)
+2. **Code changes**: Only application layer rebuilds (~30 sec or less)
 3. **Dependency changes**: Only affected layers rebuild
 
 Example workflow:
@@ -342,7 +332,7 @@ OR
 make clean
 
 # Remove Docker images
-docker image rm esphome-linux-cross
+docker image rm esphome-linux
 
 # Remove SDK (if needed)
 rm -rf ../Ingenic-SDK-T31-1.1.1-20200508

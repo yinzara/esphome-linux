@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
 
     snprintf(config.device_name, sizeof(config.device_name), "%s", hostname);
     snprintf(config.mac_address, sizeof(config.mac_address), "%s", mac_address);
-    snprintf(config.esphome_version, sizeof(config.esphome_version), "2025.1.0");
+    snprintf(config.esphome_version, sizeof(config.esphome_version), "2025.12.0");
     snprintf(config.model, sizeof(config.model), "ESPHome Linux");
     snprintf(config.manufacturer, sizeof(config.manufacturer), "Thingino");
     snprintf(config.friendly_name, sizeof(config.friendly_name), "%s", hostname);

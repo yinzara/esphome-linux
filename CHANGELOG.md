@@ -209,4 +209,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - N/A
 
-[0.0.8]: https://github.com/yinzara/esphome-linux/releases/tag/v0.0.8
+[0.0.8]: https://github.com/yinzara/esphome-linux/releases/tag/v0.0.8## 
+
+[0.0.9] - 2025-01-23
+
+### Added
+- N/A
+
+### Changed
+- Updated ESPHome version to 2025.12.0
+
+### Deprecated
+- N/A
+
+### Removed
+- N/A
+
+### Fixed
+- N/A
+
+### Security
+- N/A
+
+[0.0.9]: https://github.com/yinzara/esphome-linux/releases/tag/v0.0.9

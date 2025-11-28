@@ -209,7 +209,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - N/A
 
-[0.0.8]: https://github.com/yinzara/esphome-linux/releases/tag/v0.0.8## 
+[0.0.8]: https://github.com/yinzara/esphome-linux/releases/tag/v0.0.8##
 
 [0.0.9] - 2025-01-23
 
@@ -232,3 +232,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - N/A
 
 [0.0.9]: https://github.com/yinzara/esphome-linux/releases/tag/v0.0.9
+
+[0.0.10] - 2025-01-28
+
+### Added
+- N/A
+
+### Changed
+- Send actual raw advertisement data to HA
+
+### Deprecated
+- N/A
+
+### Removed
+- N/A
+
+### Fixed
+- N/A
+
+### Security
+- N/A
+
+[0.0.10]: https://github.com/yinzara/esphome-linux/releases/tag/v0.0.10

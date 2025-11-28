@@ -172,69 +172,22 @@ static void process_advertisement(ble_scanner_t *scanner, const BLEPP::Advertisi
     // This is a simplification - libblepp doesn't directly expose address type
     device->address_type = 0; // Default to public
 
-    // Build advertisement data from libblepp structures
+    // Use raw_packet data directly from libblepp - this contains the actual
+    // advertisement data bytes as received from the BLE device
     device->data_len = 0;
 
-    // Add manufacturer data (type 0xFF)
-    for (const auto &mfg : ad.manufacturer_specific_data) {
-        if (device->data_len + 2 + mfg.size() <= BLE_ADV_DATA_MAX) {
-            device->data[device->data_len++] = 1 + mfg.size(); // Length
-            device->data[device->data_len++] = 0xFF;           // Type: Manufacturer Specific
-            memcpy(&device->data[device->data_len], mfg.data(), mfg.size());
-            device->data_len += mfg.size();
-        }
-    }
-
-    // Add service data (type 0x16 for 16-bit UUIDs)
-    for (const auto &svc : ad.service_data) {
-        if (device->data_len + 2 + svc.size() <= BLE_ADV_DATA_MAX) {
-            device->data[device->data_len++] = 1 + svc.size(); // Length
-            device->data[device->data_len++] = 0x16;           // Type: Service Data - 16-bit UUID
-            memcpy(&device->data[device->data_len], svc.data(), svc.size());
-            device->data_len += svc.size();
-        }
-    }
-
-    // Add UUIDs (type 0x03 for complete list of 16-bit UUIDs)
-    if (!ad.UUIDs.empty() && ad.uuid_16_bit_complete) {
-        size_t uuid_data_len = 0;
-        uint8_t uuid_data[BLE_ADV_DATA_MAX];
-
-        for (const auto &uuid : ad.UUIDs) {
-            // Only include 16-bit UUIDs
-            if (uuid.type == BLEPP::BT_UUID16 && uuid_data_len + 2 <= sizeof(uuid_data)) {
-                uuid_data[uuid_data_len++] = uuid.value.u16 & 0xFF;
-                uuid_data[uuid_data_len++] = (uuid.value.u16 >> 8) & 0xFF;
+    for (const auto &packet : ad.raw_packet) {
+        if (device->data_len + packet.size() <= BLE_ADV_DATA_MAX) {
+            memcpy(&device->data[device->data_len], packet.data(), packet.size());
+            device->data_len += packet.size();
+        } else {
+            // Would overflow, copy what we can
+            size_t remaining = BLE_ADV_DATA_MAX - device->data_len;
+            if (remaining > 0) {
+                memcpy(&device->data[device->data_len], packet.data(), remaining);
+                device->data_len = BLE_ADV_DATA_MAX;
             }
-        }
-
-        if (uuid_data_len > 0 && device->data_len + 2 + uuid_data_len <= BLE_ADV_DATA_MAX) {
-            device->data[device->data_len++] = 1 + uuid_data_len; // Length
-            device->data[device->data_len++] = 0x03;              // Type: Complete 16-bit UUIDs
-            memcpy(&device->data[device->data_len], uuid_data, uuid_data_len);
-            device->data_len += uuid_data_len;
-        }
-    }
-
-    // Add local name if present (type 0x08 for shortened, 0x09 for complete)
-    if (ad.local_name != nullptr) {
-        const std::string &name = ad.local_name->name;
-        if (device->data_len + 2 + name.size() <= BLE_ADV_DATA_MAX) {
-            device->data[device->data_len++] = 1 + name.size();                       // Length
-            device->data[device->data_len++] = ad.local_name->complete ? 0x09 : 0x08; // Type
-            memcpy(&device->data[device->data_len], name.c_str(), name.size());
-            device->data_len += name.size();
-        }
-    }
-
-    // Add flags if present (type 0x01)
-    if (ad.flags != nullptr && !ad.flags->flag_data.empty()) {
-        const auto &flags = ad.flags->flag_data;
-        if (device->data_len + 2 + flags.size() <= BLE_ADV_DATA_MAX) {
-            device->data[device->data_len++] = 1 + flags.size(); // Length
-            device->data[device->data_len++] = 0x01;             // Type: Flags
-            memcpy(&device->data[device->data_len], flags.data(), flags.size());
-            device->data_len += flags.size();
+            break;
         }
     }
 

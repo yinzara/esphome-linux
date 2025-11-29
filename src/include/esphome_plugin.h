@@ -36,6 +36,7 @@
  *     .handle_message = my_plugin_handle_message,
  *     .configure_device_info = NULL,  // Optional: configure device capabilities
  *     .list_entities = NULL,          // Optional: register entities
+ *     .subscribe_states = NULL         // Optional: provide initial states
  * };
  * @endcode
  */
@@ -151,6 +152,23 @@ typedef int (*esphome_plugin_list_entities_fn)(
     int client_id);
 
 /**
+ * Plugin subscribe states callback
+ *
+ * After client subscribes to states, this is called to allow plugins to
+ * send initial states for any entities they expose (sensors, switches, etc.).
+ *
+ * Plugins should use esphome_plugin_send_message_to_client() to send
+ * entity responses (e.g., BinarySensorInfo, SwitchInfo, etc.).
+ *
+ * @param ctx Plugin context
+ * @param client_id Client requesting entity list
+ * @return 0 on success, -1 on error
+ */
+typedef int (*esphome_plugin_subscribe_states_fn)(
+    esphome_plugin_context_t *ctx,
+    int client_id);
+
+    /**
  * Plugin descriptor
  */
 struct esphome_plugin {
@@ -161,6 +179,7 @@ struct esphome_plugin {
     esphome_plugin_msg_handler_fn handle_message; /* Message handler */
     esphome_plugin_configure_device_info_fn configure_device_info; /* Device info config (optional) */
     esphome_plugin_list_entities_fn list_entities; /* Entity registration (optional) */
+    esphome_plugin_subscribe_states_fn subscribe_states; /* Entity Initial state (optional) */
     esphome_plugin_t *next;                  /* Linked list (internal use) */
     esphome_plugin_context_t *ctx;           /* Persistent context (internal use) */
 };
@@ -241,13 +260,14 @@ void esphome_plugin_log(esphome_plugin_context_t *ctx,
  *     my_plugin_cleanup,
  *     my_plugin_handle_message,
  *     NULL,  // Optional: configure_device_info
- *     NULL   // Optional: list_entities
+ *     NULL,  // Optional: list_entities
+ *     NULL   // Optional: subscribe_states
  * );
  * @endcode
  */
 #define ESPHOME_PLUGIN_REGISTER(var_name, plugin_name, plugin_version, \
                                  init_fn, cleanup_fn, handle_msg_fn, \
-                                 config_device_info_fn, list_entities_fn) \
+                                 config_device_info_fn, list_entities_fn, subscribe_states_fn) \
     static esphome_plugin_t var_name = { \
         .name = plugin_name, \
         .version = plugin_version, \
@@ -256,6 +276,7 @@ void esphome_plugin_log(esphome_plugin_context_t *ctx,
         .handle_message = handle_msg_fn, \
         .configure_device_info = config_device_info_fn, \
         .list_entities = list_entities_fn, \
+        .subscribe_states = subscribe_states_fn, \
         .next = NULL \
     }; \
     __attribute__((constructor)) static void __register_##var_name(void) { \

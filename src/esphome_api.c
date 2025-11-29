@@ -298,12 +298,24 @@ static void handle_list_entities_request(esphome_api_server_t *server,
 static void handle_subscribe_states_request(esphome_api_server_t *server,
                                              client_connection_t *client,
                                              const uint8_t *payload, size_t payload_len) {
-    (void)server;
-    (void)client;
     (void)payload;
     (void)payload_len;
 
-    /* No states to subscribe to - client will receive no state updates */
+    /* Find client ID */
+    int client_id = -1;
+    pthread_mutex_lock(&server->clients_mutex);
+    for (int i = 0; i < ESPHOME_MAX_CLIENTS; i++) {
+        if (&server->clients[i] == client) {
+            client_id = i;
+            break;
+        }
+    }
+    pthread_mutex_unlock(&server->clients_mutex);
+
+    /* Allow plugins to list their entities */
+    if (client_id >= 0) {
+        esphome_plugin_subscribe_states_all(server, &server->config, client_id);
+    }
 }
 
 static void handle_ping_request(esphome_api_server_t *server,

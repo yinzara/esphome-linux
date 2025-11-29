@@ -150,6 +150,31 @@ int esphome_plugin_list_entities_all(
 }
 
 /**
+ * Subscribe states from all plugins
+ * Calls each plugin's subscribe_states callback if present
+ */
+int esphome_plugin_subscribe_states_all(
+    esphome_api_server_t *server,
+    const esphome_device_config_t *config,
+    int client_id)
+{
+    (void)server;
+    (void)config;
+
+    for (esphome_plugin_t *plugin = plugins_head; plugin != NULL; plugin = plugin->next) {
+        if (plugin->subscribe_states && plugin->ctx) {
+            printf(LOG_PREFIX "Plugin %s subscribe states...\n", plugin->name);
+            if (plugin->subscribe_states(plugin->ctx, client_id) < 0) {
+                fprintf(stderr, LOG_PREFIX "Warning: Plugin %s failed to subscribe states\n",
+                        plugin->name);
+            }
+        }
+    }
+
+    return 0;
+}
+
+/**
  * Dispatch message to plugins
  * Returns 0 if a plugin handled the message, -1 if no plugin handled it
  */

@@ -76,6 +76,22 @@ int esphome_plugin_list_entities_all(
     int client_id);
 
 /**
+ * Allow all plugins to send initial states of their entities
+ *
+ * Called during the subscribe states phase. Each plugin can send entity
+ * responses for any entities it exposes.
+ *
+ * @param server API server instance
+ * @param config Device configuration
+ * @param client_id Client requesting subscription
+ * @return 0 on success, -1 on error
+ */
+int esphome_plugin_subscribe_states_all(
+    esphome_api_server_t *server,
+    const esphome_device_config_t *config,
+    int client_id);
+
+/**
  * Dispatch a message to all plugins
  *
  * Called when a message is received from a client. The message is passed

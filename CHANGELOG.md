@@ -276,3 +276,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - N/A
 
 [0.0.11]: https://github.com/yinzara/esphome-linux/releases/tag/v0.0.11
+
+[0.0.12] - 2025-01-28
+
+### Added
+- N/A
+
+### Changed
+- Fixes for a clean shutdown
+
+### Deprecated
+- N/A
+
+### Removed
+- N/A
+
+### Fixed
+- N/A
+
+### Security
+- N/A
+
+[0.0.12]: https://github.com/yinzara/esphome-linux/releases/tag/v0.0.12

@@ -208,12 +208,23 @@ static void *report_thread_func(void *arg) {
 
     printf(LOG_PREFIX "Report thread started\n");
 
+    /* Use shorter sleep intervals to check stop flag more frequently */
+    const int sleep_interval_ms = 100;
+    int elapsed_ms = 0;
+
     while (!scanner->stop_requested) {
-        usleep(REPORT_INTERVAL_MS * 1000);
+        usleep(sleep_interval_ms * 1000);
+        elapsed_ms += sleep_interval_ms;
 
         if (scanner->stop_requested) {
             break;
         }
+
+        /* Only do reporting every REPORT_INTERVAL_MS */
+        if (elapsed_ms < REPORT_INTERVAL_MS) {
+            continue;
+        }
+        elapsed_ms = 0;
 
         /* Clean up stale devices first */
         cleanup_stale_devices(scanner);

@@ -87,8 +87,24 @@ static void flush_ble_batch(bluetooth_proxy_state_t *state, esphome_plugin_conte
 static void *flush_thread_func(void *arg) {
     bluetooth_proxy_state_t *state = (bluetooth_proxy_state_t *)arg;
 
+    /* Use shorter sleep intervals to check stop flag more frequently */
+    const int sleep_interval_ms = 10;
+    int sleep_count = 0;
+
     while (state->flush_thread_running) {
-        usleep(BLE_BATCH_FLUSH_INTERVAL_MS * 1000);
+        usleep(sleep_interval_ms * 1000);
+        sleep_count++;
+
+        /* Check stop flag frequently */
+        if (!state->flush_thread_running) {
+            break;
+        }
+
+        /* Only check flush interval every BLE_BATCH_FLUSH_INTERVAL_MS */
+        if (sleep_count * sleep_interval_ms < BLE_BATCH_FLUSH_INTERVAL_MS) {
+            continue;
+        }
+        sleep_count = 0;
 
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);

@@ -11,6 +11,7 @@
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -32,6 +33,9 @@ static esphome_api_server_t *api_server = NULL;
 static void signal_handler(int sig) {
     (void)sig;
     running = 0;
+    /* Write to stderr to confirm signal received (async-signal-safe) */
+    const char msg[] = "\n[main] Signal received, shutting down...\n";
+    write(STDERR_FILENO, msg, sizeof(msg) - 1);
 }
 
 /**
@@ -86,10 +90,28 @@ int main(int argc, char *argv[]) {
            PROGRAM_NAME, VERSION);
     printf("Copyright (c) 2025 Thingino Project\n\n");
 
-    /* Setup signal handlers */
-    signal(SIGINT, signal_handler);
-    signal(SIGTERM, signal_handler);
-    signal(SIGPIPE, SIG_IGN);
+    /* Block SIGINT and SIGTERM before creating any threads.
+     * Child threads will inherit the blocked signal mask.
+     * We'll unblock these signals only in the main thread later. */
+    sigset_t block_mask, old_mask;
+    sigemptyset(&block_mask);
+    sigaddset(&block_mask, SIGINT);
+    sigaddset(&block_mask, SIGTERM);
+    pthread_sigmask(SIG_BLOCK, &block_mask, &old_mask);
+
+    /* Setup signal handlers using sigaction for reliability */
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = signal_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;  /* Don't use SA_RESTART so sleep() is interrupted */
+
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
+
+    /* Ignore SIGPIPE */
+    sa.sa_handler = SIG_IGN;
+    sigaction(SIGPIPE, &sa, NULL);
 
     /* Get device information */
     char hostname[128] = "thingino-proxy";
@@ -137,11 +159,18 @@ int main(int argc, char *argv[]) {
 
     printf("Plugins loaded and ready\n");
 
+    /* Now that all threads are created, unblock signals only in the main thread.
+     * This ensures signals are delivered to the main thread, not worker threads. */
+    pthread_sigmask(SIG_UNBLOCK, &block_mask, NULL);
+
     printf("Press Ctrl+C to stop\n\n");
 
-    /* Main loop - wait for signal */
+    /* Main loop - wait for signal using sigsuspend for reliable signal handling */
+    sigset_t wait_mask;
+    sigemptyset(&wait_mask);  /* Wait with no signals blocked */
+
     while (running) {
-        sleep(1);
+        sigsuspend(&wait_mask);  /* Atomically unblock and wait for signals */
     }
 
     /* Cleanup */

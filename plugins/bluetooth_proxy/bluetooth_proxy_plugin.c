@@ -342,5 +342,6 @@ ESPHOME_PLUGIN_REGISTER(bluetooth_proxy_plugin, "BluetoothProxy", "1.0.0",
     bluetooth_proxy_cleanup,
     bluetooth_proxy_handle_message,
     bluetooth_proxy_configure_device_info,
-    NULL  /* No entities exposed by this plugin */
+    NULL,  /* No entities exposed by this plugin */
+    NULL
 );

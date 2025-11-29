@@ -298,3 +298,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - N/A
 
 [0.0.12]: https://github.com/yinzara/esphome-linux/releases/tag/v0.0.12
+
+[0.0.13] - 2025-01-28
+
+### Added
+- N/A
+
+### Changed
+- Updated Libble version to 0.0.4
+
+### Deprecated
+- N/A
+
+### Removed
+- N/A
+
+### Fixed
+- BLE scanning parameter support
+
+### Security
+- N/A
+
+[0.0.13]: https://github.com/yinzara/esphome-linux/releases/tag/v0.0.13

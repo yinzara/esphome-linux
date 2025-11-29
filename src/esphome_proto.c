@@ -362,8 +362,12 @@ size_t esphome_encode_ble_advertisements(uint8_t *buf, size_t size,
     for (size_t i = 0; i < msg->count && i < ESPHOME_MAX_ADV_BATCH; i++) {
         const esphome_ble_advertisement_t *adv = &msg->advertisements[i];
 
-        printf("[esphome-proto] Encoding advertisement %zu: address=0x%016llX, rssi=%d, type=%u, data_len=%zu\n",
-               i, (unsigned long long)adv->address, adv->rssi, adv->address_type, adv->data_len);
+        printf("[esphome-proto] Encoding advertisement %zu: address=%02X:%02X:%02X:%02X:%02X:%02X, rssi=%d, type=%u, data_len=%zu\n",
+               i,
+               (uint8_t)(adv->address >> 40), (uint8_t)(adv->address >> 32),
+               (uint8_t)(adv->address >> 24), (uint8_t)(adv->address >> 16),
+               (uint8_t)(adv->address >> 8), (uint8_t)(adv->address),
+               adv->rssi, adv->address_type, adv->data_len);
 
         /* Encode repeated message: tag + length + fields */
         uint8_t adv_buf[256];

@@ -11,27 +11,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <time.h>
 #include <stdexcept>
 
 #define LOG_PREFIX "[ble-scanner] "
-
-/**
- * Cached device state
- */
-#define MAX_CACHED_DEVICES 64
-#define REPORT_INTERVAL_MS 10000      /* Report every 10 seconds */
-#define DEVICE_TIMEOUT_MS  60000      /* Remove devices not seen in 60 seconds */
-
-typedef struct {
-    uint8_t address[BLE_MAC_LEN];          /* BLE MAC address */
-    uint8_t address_type;                   /* 0=public, 1=random */
-    int8_t rssi;                            /* Signal strength */
-    uint8_t data[BLE_ADV_DATA_MAX];        /* Advertisement data */
-    size_t data_len;
-    bool valid;
-    uint64_t last_seen;                     /* Timestamp of last update */
-} cached_device_t;
 
 /**
  * BLE scanner instance
@@ -43,24 +25,12 @@ struct ble_scanner {
     void *user_data;
     bool running;
     pthread_t event_thread;
-    pthread_t report_thread;
-    cached_device_t device_cache[MAX_CACHED_DEVICES];
-    pthread_mutex_t cache_mutex;
     bool stop_requested;
 };
 
 /* -----------------------------------------------------------------
  * Utility functions
  * ----------------------------------------------------------------- */
-
-/**
- * Get current timestamp in milliseconds
- */
-static uint64_t get_timestamp_ms(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (uint64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
-}
 
 /**
  * Parse MAC address from string to bytes
@@ -84,190 +54,46 @@ static bool parse_mac_address(const char *str, uint8_t *mac) {
 }
 
 /**
- * Find or create cached device entry
- */
-static cached_device_t *get_or_create_cached_device(ble_scanner_t *scanner, const uint8_t *mac) {
-    pthread_mutex_lock(&scanner->cache_mutex);
-
-    /* Look for existing entry */
-    for (int i = 0; i < MAX_CACHED_DEVICES; i++) {
-        if (scanner->device_cache[i].valid &&
-            memcmp(scanner->device_cache[i].address, mac, BLE_MAC_LEN) == 0) {
-            pthread_mutex_unlock(&scanner->cache_mutex);
-            return &scanner->device_cache[i];
-        }
-    }
-
-    /* Find empty slot or oldest entry */
-    cached_device_t *oldest = &scanner->device_cache[0];
-    for (int i = 0; i < MAX_CACHED_DEVICES; i++) {
-        if (!scanner->device_cache[i].valid) {
-            /* Empty slot found */
-            oldest = &scanner->device_cache[i];
-            break;
-        }
-        if (scanner->device_cache[i].last_seen < oldest->last_seen) {
-            oldest = &scanner->device_cache[i];
-        }
-    }
-
-    /* Initialize new entry */
-    memset(oldest, 0, sizeof(cached_device_t));
-    memcpy(oldest->address, mac, BLE_MAC_LEN);
-    oldest->valid = true;
-    oldest->last_seen = get_timestamp_ms();
-
-    pthread_mutex_unlock(&scanner->cache_mutex);
-    return oldest;
-}
-
-/**
- * Remove stale devices from cache
- */
-static void cleanup_stale_devices(ble_scanner_t *scanner) {
-    uint64_t now = get_timestamp_ms();
-    uint64_t timeout_threshold = now - DEVICE_TIMEOUT_MS;
-
-    pthread_mutex_lock(&scanner->cache_mutex);
-
-    int removed = 0;
-    for (int i = 0; i < MAX_CACHED_DEVICES; i++) {
-        cached_device_t *device = &scanner->device_cache[i];
-
-        if (device->valid && device->last_seen < timeout_threshold) {
-            printf(LOG_PREFIX "Removing stale device: %02X:%02X:%02X:%02X:%02X:%02X (not seen for %llu ms)\n",
-                   device->address[0], device->address[1], device->address[2],
-                   device->address[3], device->address[4], device->address[5],
-                   (unsigned long long)(now - device->last_seen));
-            memset(device, 0, sizeof(cached_device_t));
-            removed++;
-        }
-    }
-
-    pthread_mutex_unlock(&scanner->cache_mutex);
-
-    if (removed > 0) {
-        printf(LOG_PREFIX "Cleaned up %d stale device(s)\n", removed);
-    }
-}
-
-/**
- * Convert libblepp advertisement to our format and merge into cache
+ * Convert libblepp advertisement to our format and report immediately
  */
 static void process_advertisement(ble_scanner_t *scanner, const BLEPP::AdvertisingResponse &ad) {
-    uint8_t mac[BLE_MAC_LEN];
-    if (!parse_mac_address(ad.address.c_str(), mac)) {
+    ble_advertisement_t advert;
+    memset(&advert, 0, sizeof(advert));
+
+    if (!parse_mac_address(ad.address.c_str(), advert.address)) {
         printf(LOG_PREFIX "Failed to parse MAC address: %s\n", ad.address.c_str());
         return;
     }
 
-    cached_device_t *device = get_or_create_cached_device(scanner, mac);
-
-    pthread_mutex_lock(&scanner->cache_mutex);
-
-    // Update RSSI
-    device->rssi = ad.rssi;
+    advert.rssi = ad.rssi;
 
     // Determine address type (random if contains local/private, public otherwise)
     // This is a simplification - libblepp doesn't directly expose address type
-    device->address_type = 0; // Default to public
+    advert.address_type = 0; // Default to public
 
     // Use raw_packet data directly from libblepp - this contains the actual
     // advertisement data bytes as received from the BLE device
-    device->data_len = 0;
+    advert.data_len = 0;
 
     for (const auto &packet : ad.raw_packet) {
-        if (device->data_len + packet.size() <= BLE_ADV_DATA_MAX) {
-            memcpy(&device->data[device->data_len], packet.data(), packet.size());
-            device->data_len += packet.size();
+        if (advert.data_len + packet.size() <= BLE_ADV_DATA_MAX) {
+            memcpy(&advert.data[advert.data_len], packet.data(), packet.size());
+            advert.data_len += packet.size();
         } else {
             // Would overflow, copy what we can
-            size_t remaining = BLE_ADV_DATA_MAX - device->data_len;
+            size_t remaining = BLE_ADV_DATA_MAX - advert.data_len;
             if (remaining > 0) {
-                memcpy(&device->data[device->data_len], packet.data(), remaining);
-                device->data_len = BLE_ADV_DATA_MAX;
+                memcpy(&advert.data[advert.data_len], packet.data(), remaining);
+                advert.data_len = BLE_ADV_DATA_MAX;
             }
             break;
         }
     }
 
-    device->last_seen = get_timestamp_ms();
-
-    pthread_mutex_unlock(&scanner->cache_mutex);
-}
-
-/* -----------------------------------------------------------------
- * Periodic reporting thread
- * ----------------------------------------------------------------- */
-
-/**
- * Report thread - periodically reports all cached devices
- */
-static void *report_thread_func(void *arg) {
-    ble_scanner_t *scanner = (ble_scanner_t *)arg;
-
-    printf(LOG_PREFIX "Report thread started\n");
-
-    /* Use shorter sleep intervals to check stop flag more frequently */
-    const int sleep_interval_ms = 100;
-    int elapsed_ms = 0;
-
-    while (!scanner->stop_requested) {
-        usleep(sleep_interval_ms * 1000);
-        elapsed_ms += sleep_interval_ms;
-
-        if (scanner->stop_requested) {
-            break;
-        }
-
-        /* Only do reporting every REPORT_INTERVAL_MS */
-        if (elapsed_ms < REPORT_INTERVAL_MS) {
-            continue;
-        }
-        elapsed_ms = 0;
-
-        /* Clean up stale devices first */
-        cleanup_stale_devices(scanner);
-
-        /* Report all active devices */
-        pthread_mutex_lock(&scanner->cache_mutex);
-
-        int reported = 0;
-        for (int i = 0; i < MAX_CACHED_DEVICES; i++) {
-            cached_device_t *device = &scanner->device_cache[i];
-
-            if (!device->valid) {
-                continue;
-            }
-
-            /* Create advertisement from cached state */
-            ble_advertisement_t advert;
-            memcpy(advert.address, device->address, sizeof(advert.address));
-            advert.address_type = device->address_type;
-            advert.rssi = device->rssi;
-            memcpy(advert.data, device->data, device->data_len);
-            advert.data_len = device->data_len;
-
-            pthread_mutex_unlock(&scanner->cache_mutex);
-
-            /* Send to callback */
-            if (scanner->callback) {
-                scanner->callback(&advert, scanner->user_data);
-                reported++;
-            }
-
-            pthread_mutex_lock(&scanner->cache_mutex);
-        }
-
-        pthread_mutex_unlock(&scanner->cache_mutex);
-
-        if (reported > 0) {
-            printf(LOG_PREFIX "Reported %d device(s)\n", reported);
-        }
+    // Report immediately via callback
+    if (scanner->callback) {
+        scanner->callback(&advert, scanner->user_data);
     }
-
-    printf(LOG_PREFIX "Report thread stopped\n");
-    return NULL;
 }
 
 /* -----------------------------------------------------------------
@@ -275,7 +101,7 @@ static void *report_thread_func(void *arg) {
  * ----------------------------------------------------------------- */
 
 /**
- * Event loop thread - reads advertisements from BLEScanner
+ * Event loop thread - reads advertisements from BLEScanner and reports immediately
  */
 static void *event_loop_thread(void *arg) {
     ble_scanner_t *scanner = (ble_scanner_t *)arg;
@@ -285,14 +111,14 @@ static void *event_loop_thread(void *arg) {
     try {
         while (!scanner->stop_requested) {
             // Get advertisements from scanner (blocking call with timeout)
-            std::vector<BLEPP::AdvertisingResponse> ads = scanner->scanner->get_advertisements(1000);
+            std::vector<BLEPP::AdvertisingResponse> ads = scanner->scanner->get_advertisements(100);
 
             for (const auto &ad : ads) {
                 if (scanner->stop_requested) {
                     break;
                 }
 
-                // Process and cache the advertisement
+                // Process and report the advertisement immediately
                 process_advertisement(scanner, ad);
             }
         }
@@ -319,10 +145,6 @@ ble_scanner_t *ble_scanner_init(ble_advert_callback_t callback, void *user_data)
     scanner->user_data = user_data;
     scanner->running = false;
     scanner->stop_requested = false;
-
-    /* Initialize device cache */
-    memset(scanner->device_cache, 0, sizeof(scanner->device_cache));
-    pthread_mutex_init(&scanner->cache_mutex, NULL);
 
     /* Set BLEPP log level from environment variable */
     const char *log_level_env = getenv("LOG_LEVEL");
@@ -353,24 +175,21 @@ ble_scanner_t *ble_scanner_init(ble_advert_callback_t callback, void *user_data)
         scanner->transport = BLEPP::create_client_transport();
         if (!scanner->transport) {
             fprintf(stderr, LOG_PREFIX "Failed to create BLE transport (no BlueZ or Nimble support)\n");
-            pthread_mutex_destroy(&scanner->cache_mutex);
             free(scanner);
             return NULL;
         }
 
         printf(LOG_PREFIX "Using transport: %s\n", scanner->transport->get_transport_name());
 
-        /* Create BLEScanner with the transport */
+        /* Create BLEScanner with the transport - no duplicate filtering since we report immediately */
         scanner->scanner = new BLEPP::BLEScanner(
-            scanner->transport,
-            BLEPP::BLEScanner::FilterDuplicates::Software  /* Software duplicate filtering */
+            scanner->transport
         );
     } catch (const std::exception &e) {
         fprintf(stderr, LOG_PREFIX "Failed to create BLEScanner: %s\n", e.what());
         if (scanner->transport) {
             delete scanner->transport;
         }
-        pthread_mutex_destroy(&scanner->cache_mutex);
         free(scanner);
         return NULL;
     }
@@ -391,9 +210,14 @@ int ble_scanner_start(ble_scanner_t *scanner) {
 
     scanner->stop_requested = false;
 
-    /* Start BLE scanning (passive mode) */
+    /* Start BLE scanning (active mode) */
     try {
-        scanner->scanner->start(true);  /* true = passive scanning */
+		BLEPP::ScanParams params;
+		params.scan_type = BLEPP::ScanParams::ScanType::Active;
+		params.interval_ms = 500;  // 500ms for WiFi coexistence
+		params.window_ms = 60;      // 10% duty cycle (~50ms)
+		params.filter_duplicates = BLEPP::ScanParams::FilterDuplicates::Off;
+        scanner->scanner->start(params);  /* false = active scanning */
     } catch (const std::exception &e) {
         fprintf(stderr, LOG_PREFIX "Failed to start BLE scanner: %s\n", e.what());
         return -1;
@@ -408,17 +232,7 @@ int ble_scanner_start(ble_scanner_t *scanner) {
         return -1;
     }
 
-    /* Start report thread */
-    if (pthread_create(&scanner->report_thread, NULL, report_thread_func, scanner) != 0) {
-        fprintf(stderr, LOG_PREFIX "Failed to create report thread\n");
-        scanner->stop_requested = true;
-        pthread_join(scanner->event_thread, NULL);
-        scanner->scanner->stop();
-        scanner->running = false;
-        return -1;
-    }
-
-    printf(LOG_PREFIX "Scanner started (periodic reporting every %d ms)\n", REPORT_INTERVAL_MS);
+    printf(LOG_PREFIX "Scanner started (immediate reporting mode)\n");
     return 0;
 }
 
@@ -429,7 +243,7 @@ int ble_scanner_stop(ble_scanner_t *scanner) {
 
     printf(LOG_PREFIX "Stopping scanner...\n");
 
-    /* Signal threads to stop */
+    /* Signal thread to stop */
     scanner->stop_requested = true;
 
     /* Stop BLE scanner */
@@ -439,9 +253,8 @@ int ble_scanner_stop(ble_scanner_t *scanner) {
         fprintf(stderr, LOG_PREFIX "Error stopping BLE scanner: %s\n", e.what());
     }
 
-    /* Wait for threads to finish */
+    /* Wait for thread to finish */
     pthread_join(scanner->event_thread, NULL);
-    pthread_join(scanner->report_thread, NULL);
 
     scanner->running = false;
 
@@ -469,8 +282,6 @@ void ble_scanner_free(ble_scanner_t *scanner) {
     if (scanner->transport) {
         delete scanner->transport;
     }
-
-    pthread_mutex_destroy(&scanner->cache_mutex);
 
     free(scanner);
     printf(LOG_PREFIX "Scanner freed\n");

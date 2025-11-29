@@ -3,7 +3,7 @@ set -e
 
 LIBBLEPP_REPO="https://github.com/yinzara/libblepp.git"
 LIBBLEPP_DIR="libblepp"
-LIBBLEPP_TAG="v0.0.1"
+LIBBLEPP_TAG="v0.0.4"
 
 # Clone libblepp repository if not already present
 if [ ! -d "$LIBBLEPP_DIR" ]; then

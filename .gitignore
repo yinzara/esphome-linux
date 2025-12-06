@@ -6,6 +6,7 @@ builddir/
 *.a
 *.so
 *.so.*
+*.tar.gz
 
 # Meson specific
 meson-logs/

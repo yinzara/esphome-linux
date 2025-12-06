@@ -271,6 +271,8 @@ typedef struct {
 #define VOICE_ASSISTANT_FEATURE_SPEAKER        (1 << 1)  /* Speaker support */
 #define VOICE_ASSISTANT_FEATURE_API_AUDIO      (1 << 2)  /* API audio streaming */
 #define VOICE_ASSISTANT_FEATURE_TIMERS         (1 << 3)  /* Timer support */
+#define VOICE_ASSISTANT_FEATURE_ANNOUNCE         (1 << 4)  /* Announce support */
+#define VOICE_ASSISTANT_FEATURE_START_CONVERSATION (1 << 5)  /* Start Conversation support */
 
 /* Z-Wave Proxy Feature Flags (bitfield)
  * See api.proto ZWaveProxyFeature enum for complete list

@@ -1,5 +1,5 @@
 project('esphome-linux', ['c', 'cpp'],
-  version: '0.0.13',
+  version: '0.0.14',
   license: 'MIT',
   default_options: [
     'warning_level=2',
@@ -23,6 +23,7 @@ core_sources = files(
   'src/esphome_api.c',
   'src/esphome_proto.c',
   'src/esphome_plugin.c',
+  'src/switch_proto.c',
 )
 
 # Plugin sources (optional, can be empty)
